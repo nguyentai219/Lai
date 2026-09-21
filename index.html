@@ -538,6 +538,60 @@
     .toast.show{transform:translateX(-50%) translateY(0)}
 
     footer{margin-top:24px;text-align:center;font-size:10px;color:var(--muted)}
+
+    /* ══ BONG BÓNG BẢO VỆ MÀN HÌNH ══ */
+    @keyframes bubbleTextPulse{ 0%,100%{opacity:.35} 50%{opacity:.85} }
+    #bubble-saver{display:none;position:fixed;inset:0;z-index:9999;background:transparent}
+    #bubble-logo-wrap{display:none;position:fixed;z-index:10000;pointer-events:none;perspective:200px;border-radius:50%;overflow:hidden}
+    #bubble-logo-wrap img{width:100%;height:100%;object-fit:contain;border-radius:50%;animation:coinSpin 3.2s linear infinite;backface-visibility:visible}
+    .bubble-hint{position:absolute;bottom:36px;left:0;right:0;text-align:center;color:rgba(80,50,10,.6);font-size:12.5px;font-family:'Be Vietnam Pro',sans-serif;pointer-events:none;animation:bubbleTextPulse 2.4s ease-in-out infinite}
+
+    /* ══ SETTINGS PANEL ══ */
+    .settings-overlay{
+      display:none;position:fixed;inset:0;z-index:400;
+      background:rgba(80,50,10,.5);
+      backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+    }
+    .settings-overlay.show{display:flex;align-items:flex-end}
+    .settings-panel{
+      width:100%;background:var(--navy-light);
+      border-radius:18px 18px 0 0;
+      padding:0 0 32px;
+      box-shadow:0 -8px 32px rgba(80,50,10,.2);
+      transform:translateY(100%);
+      transition:transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .settings-overlay.show .settings-panel{transform:translateY(0)}
+
+    .settings-drag{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 16px}
+    .settings-title{font-size:15px;font-weight:800;color:var(--text);padding:0 18px 14px;border-bottom:1px solid var(--border)}
+
+    .settings-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;
+    }
+    .settings-row:last-child{border-bottom:none}
+    .settings-row-left{flex:1}
+    .settings-row-label{font-size:14px;font-weight:700;color:var(--text)}
+    .settings-row-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+    /* Toggle switch */
+    .sw-wrap{position:relative;width:46px;height:26px;flex-shrink:0}
+    .sw-wrap input{opacity:0;width:0;height:0;position:absolute}
+    .sw-track{
+      position:absolute;inset:0;
+      background:var(--border);border-radius:13px;
+      cursor:pointer;transition:background .2s;
+    }
+    .sw-wrap input:checked + .sw-track{background:var(--gold)}
+    .sw-track::after{
+      content:'';position:absolute;
+      width:20px;height:20px;border-radius:50%;
+      background:#fff;top:3px;left:3px;
+      transition:transform .2s;
+      box-shadow:0 1px 4px rgba(0,0,0,.2);
+    }
+    .sw-wrap input:checked + .sw-track::after{transform:translateX(20px)}
   </style>
 </head>
 <body>
@@ -545,11 +599,11 @@
 <!-- ══ HEADER GỌN ══ -->
 <header>
   <div class="app-icon">
-    <img src="icons/icon-192.png" alt="Tính Lãi"/>
+    <img id="app-logo-img" src="icons/icon-192.png" alt="Tính Lãi"/>
   </div>
   <div class="header-text">
     <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
-    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.1.6</span>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.2.6</span>
   </div>
   <button class="btn-settings" id="btnSettings" title="Cài đặt">
     <!-- Bánh răng SVG -->
@@ -966,9 +1020,7 @@ btnDelAll.addEventListener('click',()=>{
 });
 
 /* ── Nút cài đặt (placeholder — mở rộng sau) ── */
-btnSettings.addEventListener('click',()=>{
-  showToast('⚙️ Cài đặt — sắp ra mắt');
-});
+// btnSettings handled by settings panel
 
 /* ══════════════════════════════════════
    Render lịch sử
@@ -1026,8 +1078,585 @@ function showToast(msg){
   toastT=setTimeout(()=>toast.classList.remove('show'),2400);
 }
 
+
+/* ══════════════════════════════════════
+   BONG BÓNG BẢO VỆ MÀN HÌNH
+   ══════════════════════════════════════ */
+
+/* ══ WAKE LOCK — màn hình luôn bật ══ */
+var _wakeLock = null;
+async function applyWakeLock(enable) {
+  try {
+    if (enable === true || enable === 'true') {
+      if ('wakeLock' in navigator) {
+        _wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } else {
+      if (_wakeLock) { await _wakeLock.release(); _wakeLock = null; }
+    }
+  } catch(e) {}
+}
+// Tự động lấy lại WakeLock khi tab được focus lại
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible' && getSetting('wakelock', false)) {
+    applyWakeLock(true);
+  }
+});
+
+function getSetting(key, def) {
+  var v = localStorage.getItem('setting_' + key);
+  return v === null ? def : v === 'true';
+}
+function saveSetting(key, val) {
+  localStorage.setItem('setting_' + key, val);
+  if (key === 'wakelock') applyWakeLock(val);
+}
+
+// ── BONG BÓNG BẢO VỆ MÀN HÌNH (giống screensaver Bubbles của Windows) ─────────────────────────
+// Mặc định BẬT (getSetting('bubbleSaver', true)) — người dùng có thể tắt trong ⚙️ Cài đặt.
+// Thời gian chờ trước khi kích hoạt CỐ ĐỊNH 30 giây (không cho tuỳ chỉnh, tránh lỗi khi đặt quá ngắn).
+// Kích hoạt sau 30 giây không có bất kỳ thao tác chạm/gõ/cuộn nào trên toàn app; chạm bất kỳ đâu vào
+// màn hình lúc đang hiện bong bóng sẽ tắt ngay và bắt đầu đếm lại từ đầu.
+var _idleTimer = null;
+var _bubbleActive = false;
+var _bubbleList = [];
+var _bubbleEffects = []; // hiệu ứng vòng sáng lan toả tại điểm va chạm giữa 2 quả bóng
+var _bubbleFragments = []; // các mảnh vỡ nhỏ bắn ra khi bong bóng "nổ tung" lúc tắt overlay
+var _bubbleAnimId = null;
+var _bubbleCanvas = null, _bubbleCtx = null;
+var _bubbleColors = ['96,165,250', '52,211,153', '251,191,36', '244,114,182', '167,139,250', '45,212,191'];
+var _bubbleLogoJoinTimer = null;
+var _coinSpinRefTime = 0;
+
+function resetIdleTimer(){
+  clearTimeout(_idleTimer);
+  if (_bubbleActive) stopBubbleSaver();
+  if (getSetting('bubbleSaver', true)) {
+    _idleTimer = setTimeout(startBubbleSaver, 15000);
+  }
+}
+var _bubbleDismissing = false;
+// Chạm để tắt bong bóng bảo vệ màn hình: không ẩn ngay lập tức mà chơi hiệu ứng "vỡ ra" cho từng quả
+// bong bóng thường, đồng thời logo (nếu đang là 1 quả bóng) bay ngược trở lại đúng vị trí xoay đồng
+// xu ban đầu trên header, rồi mới thật sự ẩn overlay + bắt đầu đếm giờ lại từ đầu.
+function _bubbleDismiss(){
+  if (!_bubbleActive || _bubbleDismissing) return;
+  _bubbleDismissing = true;
+  clearTimeout(_idleTimer);
+  var logoBubble = null;
+  _bubbleList.forEach(function(b){
+    if (b.isLogo) { logoBubble = b; return; }
+    // Mỗi quả bóng thường "vỡ ra": vòng tròn màu lan toả chậm rãi + các mảnh vỡ nhỏ bắn tung ra ngoài
+    _bubbleEffects.push({ x: b.x, y: b.y, r: b.r*0.5, maxR: b.r*3.2, alpha: 0.95, color: b.color, type: 'burst' });
+    var fragCount = 6 + Math.floor(Math.random()*3);
+    for (var fk = 0; fk < fragCount; fk++) {
+      var ang = (Math.PI*2 / fragCount) * fk + (Math.random()-0.5) * 0.6;
+      var spd = 1.3 + Math.random()*2.2;
+      _bubbleFragments.push({
+        x: b.x, y: b.y,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        size: 2 + Math.random()*2.5,
+        alpha: 0.95,
+        color: b.color
+      });
+    }
+  });
+  _bubblePlayPop();
+  _bubbleList = []; // đứng yên toàn bộ vật lý, chỉ còn hiệu ứng vỡ + logo bay về hiển thị
+  var wrap = document.getElementById('bubble-logo-wrap');
+  var headerImg = document.getElementById('app-logo-img');
+  // Hiện lại header icon NGAY — wrap bay về ĐỒNG THỜI với hiệu ứng vỡ bong bóng
+  if (headerImg) headerImg.style.visibility = 'visible';
+  if (logoBubble && wrap) {
+    // Lấy tọa độ header icon để bay về
+    var headerRect = headerImg ? headerImg.getBoundingClientRect() : {left:16,top:16,width:48,height:48};
+    wrap.style.transition = 'none';
+    void wrap.offsetWidth;
+    // Bay về cùng lúc bong bóng vỡ — 400ms nhanh hơn trước
+    wrap.style.transition = 'left .6s cubic-bezier(.34,1.4,.64,1), top .6s cubic-bezier(.34,1.4,.64,1), width .6s ease, height .6s ease, opacity .5s ease';
+    wrap.style.left    = headerRect.left + 'px';
+    wrap.style.top     = headerRect.top  + 'px';
+    wrap.style.width   = headerRect.width  + 'px';
+    wrap.style.height  = headerRect.height + 'px';
+    wrap.style.opacity = '0'; // mờ dần khi về tới nơi
+  } else if (wrap) {
+    wrap.style.display = 'none';
+  }
+  setTimeout(function(){
+    if (wrap) { wrap.style.display = 'none'; wrap.style.opacity = '1'; wrap.style.transition = 'none'; }
+    _bubbleDismissing = false;
+    stopBubbleSaver();
+    if (getSetting('bubbleSaver', true)) {
+      _idleTimer = setTimeout(startBubbleSaver, 15000);
+    }
+  }, 700);
+}
+// QUAN TRỌNG: chạm để tắt bong bóng bảo vệ màn hình phải được chặn NGAY Ở PHA "CAPTURE" trên toàn bộ
+// document (không gắn trực tiếp lên phần tử overlay), vì phần tử #bubble-saver nằm ở cuối <body> —
+// SAU phần đóng thẻ script chứa đoạn code này, nên nếu gắn listener lên chính overlay ngay khi script chạy,
+// document.getElementById('bubble-saver') sẽ trả về null (phần tử chưa được trình duyệt parse ra) và
+// listener KHÔNG BAO GIỜ được gắn — đây chính là nguyên nhân lỗi "không thoát ra được" ở bản trước.
+// Cách khắc phục: lắng nghe ở document (luôn tồn tại từ đầu) với { capture: true } để đoạn code này
+// chạy TRƯỚC MỌI listener khác trên trang, chặn hẳn (preventDefault + stopPropagation) và tự tắt ngay
+// khi bong bóng đang hiện — không cho sự kiện lọt xuống bấm nhầm nút/phần tử bên dưới.
+['touchstart','mousedown'].forEach(function(evt){
+  document.addEventListener(evt, function(e){
+    if (!_bubbleActive) return; // không đang hiện bong bóng thì để sự kiện chạy bình thường
+    e.preventDefault();
+    e.stopPropagation();
+    _bubbleDismiss();
+  }, { passive: false, capture: true });
+});
+// Coi mọi tương tác của người dùng (chạm, gõ phím, cuộn, click) là "đang dùng app" → reset lại đếm giờ
+['mousedown','touchstart','keydown','scroll'].forEach(function(evt){
+  document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+// Tạm dừng hẳn khi app bị ẩn đi (chuyển app khác/khoá máy) — tránh tốn pin/CPU vẽ hiệu ứng trong nền,
+// và không tự bật bong bóng ngay khi vừa mở lại app.
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible') resetIdleTimer();
+  else { clearTimeout(_idleTimer); if (_bubbleActive) stopBubbleSaver(); }
+});
+
+function _bubbleResizeCanvas(){
+  if (!_bubbleCanvas) return;
+  _bubbleCanvas.width = window.innerWidth;
+  _bubbleCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', _bubbleResizeCanvas);
+
+
+function startBubbleSaver(){
+  if (_bubbleActive) return;
+  _bubbleActive = true;
+  _coinSpinRefTime = performance.now();
+  var overlay = document.getElementById('bubble-saver');
+  _bubbleCanvas = document.getElementById('bubble-canvas');
+  _bubbleCtx = _bubbleCanvas.getContext('2d');
+  overlay.style.display = 'block';
+  _bubbleResizeCanvas();
+  // Số lượng bong bóng co giãn theo diện tích màn hình: điện thoại nhỏ ít bóng hơn (đỡ chật),
+  // màn hình lớn/tablet nhiều bóng hơn (đỡ trống trải), luôn giữ trong khoảng 6-18 quả.
+  var screenArea = window.innerWidth * window.innerHeight;
+  var baseN = Math.round(screenArea / 42000);
+  baseN = Math.max(6, Math.min(18, baseN));
+  var n = baseN + Math.floor(Math.random()*3) - 1;
+  n = Math.max(6, n);
+  _bubbleList = [];
+  _bubbleEffects = [];
+  _bubbleFragments = [];
+  for (var i=0; i<n; i++) {
+    var r = 14 + Math.random()*28;
+    _bubbleList.push({
+      x: Math.random()*_bubbleCanvas.width,
+      y: Math.random()*_bubbleCanvas.height,
+      r: r,
+      dx: (Math.random()-0.5) * (1.1 + Math.random()*2.0),
+      dy: (Math.random()-0.5) * (1.1 + Math.random()*2.0),
+      color: _bubbleColors[Math.floor(Math.random()*_bubbleColors.length)],
+      alpha: 0.18 + Math.random()*0.22,
+      trail: [],
+      hits: 0
+    });
+  }
+  _bubbleAnimId = requestAnimationFrame(_bubbleTick);
+  _bubbleLaunchLogo();
+}
+// Cho logo app "bay" từ vị trí đang xoay trên header ra giữa màn hình, sau đó gia nhập danh sách
+// bong bóng để cùng va chạm/nảy như 1 quả bóng bình thường — chỉ khác là không đổi màu khi va chạm.
+
+function _bubbleLaunchLogo(){
+  var headerImg = document.getElementById('app-logo-img');
+  var wrap = document.getElementById('bubble-logo-wrap');
+  var logoImg = document.getElementById('bubble-logo-img');
+  if (!wrap) return;
+  var startRect = headerImg ? headerImg.getBoundingClientRect() : {left:20,top:20,width:48,height:48};
+  var targetD = 56; // đường kính khi bay ra (to hơn 1 chút cho dễ thấy, nằm trong dải cỡ bong bóng)
+  var cx = _bubbleCanvas.width / 2, cy = _bubbleCanvas.height / 2;
+  wrap.style.transition = 'none';
+  wrap.style.left = startRect.left + 'px';
+  wrap.style.top = startRect.top + 'px';
+  wrap.style.width = startRect.width + 'px';
+  wrap.style.height = startRect.height + 'px';
+  wrap.style.display = 'block';
+  // Đồng bộ pha xoay của bản sao trùng khớp với logo header (cùng chu kỳ 3.2s, lệch pha bằng đúng thời
+  // gian đã trôi qua kể từ mốc tham chiếu) — để khi header "biến mất"/hiện lại, góc xoay luôn liền mạch,
+  // không bị nhảy đột ngột tạo cảm giác khựng lại.
+  if (logoImg) {
+    var phase = (performance.now() - _coinSpinRefTime) % 3200;
+    logoImg.style.animationDelay = '-' + phase + 'ms';
+  }
+  // Ép trình duyệt áp dụng vị trí ban đầu trước khi bắt đầu transition, tránh bị gộp animation
+  void wrap.offsetWidth;
+  // Icon xoay đồng xu ở vị trí cũ trên header "biến mất" ngay khi bản sao đã bắt đầu bay ra ngoài
+  if (headerImg) headerImg.style.visibility = 'hidden';
+  wrap.style.transition = 'left .6s cubic-bezier(.34,1.4,.64,1), top .6s cubic-bezier(.34,1.4,.64,1), width .6s ease, height .6s ease';
+  wrap.style.left = (cx - targetD/2) + 'px';
+  wrap.style.top = (cy - targetD/2) + 'px';
+  wrap.style.width = targetD + 'px';
+  wrap.style.height = targetD + 'px';
+  clearTimeout(_bubbleLogoJoinTimer);
+  _bubbleLogoJoinTimer = setTimeout(function(){
+    if (!_bubbleActive) return;
+    wrap.style.transition = 'none';
+    _bubbleList.push({
+      x: cx, y: cy, r: targetD/2,
+      dx: (Math.random()-0.5) * (1.1 + Math.random()*2.0),
+      dy: (Math.random()-0.5) * (1.1 + Math.random()*2.0),
+      isLogo: true,
+      trail: []
+    });
+  }, 620);
+}
+// Giới hạn tốc độ tối đa để va chạm không làm bong bóng bắn nhanh vô hạn qua mỗi lần nẩy
+function _bubbleCapSpeed(b){
+  var maxV = 3.0;
+  var sp = Math.sqrt(b.dx*b.dx + b.dy*b.dy);
+  if (sp > maxV) { b.dx = b.dx / sp * maxV; b.dy = b.dy / sp * maxV; }
+}
+// Chọn ngẫu nhiên 1 màu mới khác với màu hiện tại, dùng khi 2 quả bóng va chạm nhau
+// Âm thanh "pop" nhỏ khi 2 quả bong bóng va chạm nhau — dùng Web Audio API riêng, không cần file âm
+// thanh ngoài. Có thể bật/tắt qua ⚙️ Cài đặt → "🔊 Âm thanh khi bong bóng va chạm" (mặc định BẬT).
+var _bubbleSoundCtx = null;
+
+function _bubblePlayPop(){
+  if (!getSetting('bubblePopSound', true)) return;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!_bubbleSoundCtx) _bubbleSoundCtx = new AC();
+    var ctx = _bubbleSoundCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    var now = ctx.currentTime;
+    var freq = 480 + Math.random()*260;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq*0.55, now+0.09);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.045, now+0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now+0.11);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now+0.13);
+  } catch(e) {}
+}
+function _bubblePickNewColor(current){
+  var pick = current;
+  var tries = 0;
+  while (pick === current && tries < 8) {
+    pick = _bubbleColors[Math.floor(Math.random()*_bubbleColors.length)];
+    tries++;
+  }
+  return pick;
+}
+// Kiểm tra va chạm giữa từng cặp bong bóng: nếu chạm nhau thì tách ra (chống dính lồng vào nhau),
+// đảo ngược hướng di chuyển của cả 2 quả, và tăng tốc độ nhẹ mỗi lần va để nhìn linh hoạt hơn.
+function _bubbleCollide(){
+  var toExplode = [];
+  for (var i = 0; i < _bubbleList.length; i++) {
+    for (var j = i + 1; j < _bubbleList.length; j++) {
+      var b1 = _bubbleList[i], b2 = _bubbleList[j];
+      var ddx = b2.x - b1.x, ddy = b2.y - b1.y;
+      var dist = Math.sqrt(ddx*ddx + ddy*ddy);
+      var minDist = b1.r + b2.r;
+      if (dist > 0 && dist < minDist) {
+        var nx = ddx / dist, ny = ddy / dist;
+        var overlap = (minDist - dist) / 2;
+        b1.x -= nx * overlap; b1.y -= ny * overlap;
+        b2.x += nx * overlap; b2.y += ny * overlap;
+        b1.dx *= -1.03; b1.dy *= -1.03;
+        b2.dx *= -1.03; b2.dy *= -1.03;
+        _bubbleCapSpeed(b1); _bubbleCapSpeed(b2);
+        // Đổi màu cả 2 quả bóng vừa va chạm sang màu ngẫu nhiên mới (khác màu cũ)
+        if (!b1.isLogo) b1.color = _bubblePickNewColor(b1.color);
+        if (!b2.isLogo) b2.color = _bubblePickNewColor(b2.color);
+        _bubblePlayPop();
+        // Tạo hiệu ứng vòng sáng lan toả ngay tại điểm va chạm (điểm giữa 2 tâm)
+        _bubbleEffects.push({
+          x: (b1.x + b2.x) / 2,
+          y: (b1.y + b2.y) / 2,
+          r: 4,
+          maxR: (b1.r + b2.r) * 0.55,
+          alpha: 0.6,
+          type: 'ring'
+        });
+        // Đếm số lần va chạm — bóng logo không tính (giữ nguyên vĩnh viễn, không bị "nổ")
+        if (!b1.isLogo) {
+          b1.hits = (b1.hits||0) + 1;
+          if (b1.hits >= 10 && toExplode.indexOf(b1) === -1) toExplode.push(b1);
+        }
+        if (!b2.isLogo) {
+          b2.hits = (b2.hits||0) + 1;
+          if (b2.hits >= 10 && toExplode.indexOf(b2) === -1) toExplode.push(b2);
+        }
+      }
+    }
+  }
+  if (toExplode.length) _bubbleExplodeAndRespawn(toExplode);
+}
+// Bong bóng va chạm đủ 10 lần thì "nổ tung" (hiệu ứng giống hệt lúc chạm màn hình để đóng overlay) rồi
+// lập tức sinh ra 1 quả bóng khác thế vào ngay, giữ nguyên tổng số lượng — nhờ đó giải thoát được các
+// quả bóng lỡ bị mắc kẹt/va đi va lại liên tục ở một góc màn hình.
+function _bubbleExplodeAndRespawn(list){
+  var w = _bubbleCanvas.width, h = _bubbleCanvas.height;
+  list.forEach(function(b){
+    var idx = _bubbleList.indexOf(b);
+    if (idx === -1) return;
+    _bubbleEffects.push({ x: b.x, y: b.y, r: b.r*0.5, maxR: b.r*3.2, alpha: 0.95, color: b.color, type: 'burst' });
+    var fragCount = 6 + Math.floor(Math.random()*3);
+    for (var fk = 0; fk < fragCount; fk++) {
+      var ang = (Math.PI*2 / fragCount) * fk + (Math.random()-0.5) * 0.6;
+      var spd = 1.3 + Math.random()*2.2;
+      _bubbleFragments.push({
+        x: b.x, y: b.y,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        size: 2 + Math.random()*2.5,
+        alpha: 0.95,
+        color: b.color
+      });
+    }
+    _bubbleList.splice(idx, 1);
+    // Sinh ngay 1 quả bóng mới thế vào, vị trí ngẫu nhiên khác (tránh mắc kẹt lại đúng chỗ cũ)
+    var newR = 14 + Math.random()*28;
+    _bubbleList.push({
+      x: Math.random()*w,
+      y: Math.random()*h,
+      r: newR,
+      dx: (Math.random()-0.5) * (1.1 + Math.random()*2.0),
+      dy: (Math.random()-0.5) * (1.1 + Math.random()*2.0),
+      color: _bubbleColors[Math.floor(Math.random()*_bubbleColors.length)],
+      alpha: 0.18 + Math.random()*0.22,
+      trail: [],
+      hits: 0
+    });
+  });
+  _bubblePlayPop();
+}
+
+function _bubbleTick(){
+  if (!_bubbleActive || !_bubbleCtx) return;
+  var w = _bubbleCanvas.width, h = _bubbleCanvas.height;
+  _bubbleCtx.clearRect(0, 0, w, h);
+  // Nền gradient rất nhẹ (5-8% độ mờ), màu đổi chậm theo thời gian — tăng chiều sâu mà không che app
+  var hue = (Date.now() / 60) % 360;
+  var bgGrad = _bubbleCtx.createRadialGradient(w/2, h*0.35, 0, w/2, h*0.35, Math.max(w,h)*0.75);
+  bgGrad.addColorStop(0, 'hsla(' + hue + ',70%,60%,0.07)');
+  bgGrad.addColorStop(1, 'hsla(' + ((hue+60)%360) + ',70%,50%,0)');
+  _bubbleCtx.fillStyle = bgGrad;
+  _bubbleCtx.fillRect(0, 0, w, h);
+  _bubbleList.forEach(function(b){
+    b.x += b.dx; b.y += b.dy;
+    if (b.x - b.r < 0) { b.x = b.r; b.dx *= -1; }
+    if (b.x + b.r > w) { b.x = w - b.r; b.dx *= -1; }
+    if (b.y - b.r < 0) { b.y = b.r; b.dy *= -1; }
+    if (b.y + b.r > h) { b.y = h - b.r; b.dy *= -1; }
+    // Lưu lại vệt di chuyển gần nhất (tối đa 5 điểm) để vẽ hiệu ứng vệt mờ dần phía sau
+    b.trail.push({x: b.x, y: b.y});
+    if (b.trail.length > 5) b.trail.shift();
+  });
+  _bubbleCollide();
+  var logoWrap = null;
+  _bubbleList.forEach(function(b){
+    var col = b.isLogo ? '255,255,255' : b.color;
+    var al = b.isLogo ? 0.16 : b.alpha;
+    // Vệt chuyển động: các điểm cũ trong trail vẽ mờ dần, nhỏ dần về phía sau hướng di chuyển
+    for (var t = 0; t < b.trail.length - 1; t++) {
+      var tp = b.trail[t];
+      var frac = (t + 1) / b.trail.length; // càng gần hiện tại càng rõ
+      _bubbleCtx.beginPath();
+      _bubbleCtx.arc(tp.x, tp.y, b.r * 0.55 * frac, 0, Math.PI*2);
+      _bubbleCtx.fillStyle = 'rgba(' + col + ',' + (al * 0.35 * frac) + ')';
+      _bubbleCtx.fill();
+    }
+    if (b.isLogo) {
+      // Bóng logo: cập nhật vị trí phần tử DOM thay vì vẽ lên canvas, để giữ animation xoay 3D
+      if (!logoWrap) logoWrap = document.getElementById('bubble-logo-wrap');
+      if (logoWrap) {
+        logoWrap.style.display = 'block';
+        logoWrap.style.width  = (b.r * 2) + 'px';
+        logoWrap.style.height = (b.r * 2) + 'px';
+        logoWrap.style.left   = (b.x - b.r) + 'px';
+        logoWrap.style.top    = (b.y - b.r) + 'px';
+        logoWrap.style.transition = 'none';
+      }
+      return;
+    }
+    // Đổ bóng mềm phía sau mỗi bong bóng để tạo cảm giác nổi khối thay vì phẳng
+    _bubbleCtx.save();
+    _bubbleCtx.shadowColor = 'rgba(' + b.color + ',0.45)';
+    _bubbleCtx.shadowBlur = b.r * 0.7;
+    _bubbleCtx.shadowOffsetY = b.r * 0.15;
+    // Vẽ bong bóng trong suốt kiểu thuỷ tinh: gradient tròn + viền sáng + điểm phản chiếu nhỏ
+    var grad = _bubbleCtx.createRadialGradient(b.x - b.r*0.3, b.y - b.r*0.3, b.r*0.1, b.x, b.y, b.r);
+    grad.addColorStop(0, 'rgba(255,255,255,' + (b.alpha + 0.25) + ')');
+    grad.addColorStop(0.5, 'rgba(' + b.color + ',' + b.alpha + ')');
+    grad.addColorStop(1, 'rgba(' + b.color + ',' + (b.alpha*0.5) + ')');
+    _bubbleCtx.beginPath();
+    _bubbleCtx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    _bubbleCtx.fillStyle = grad;
+    _bubbleCtx.fill();
+    _bubbleCtx.restore();
+    _bubbleCtx.lineWidth = 1.2;
+    _bubbleCtx.strokeStyle = 'rgba(255,255,255,' + (b.alpha + 0.15) + ')';
+    _bubbleCtx.stroke();
+    // Điểm phản chiếu ánh sáng nhỏ cho giống bong bóng xà phòng thật
+    _bubbleCtx.beginPath();
+    _bubbleCtx.arc(b.x - b.r*0.35, b.y - b.r*0.35, b.r*0.18, 0, Math.PI*2);
+    _bubbleCtx.fillStyle = 'rgba(255,255,255,' + (b.alpha + 0.35) + ')';
+    _bubbleCtx.fill();
+    // Lấp lánh ngẫu nhiên: thỉnh thoảng loé 1 điểm sáng nhỏ ở vị trí bất kỳ trên bề mặt bong bóng
+    if (Math.random() < 0.025) {
+      var sAng = Math.random() * Math.PI * 2;
+      var sDist = Math.random() * b.r * 0.6;
+      var sx = b.x + Math.cos(sAng) * sDist, sy = b.y + Math.sin(sAng) * sDist;
+      _bubbleCtx.beginPath();
+      _bubbleCtx.arc(sx, sy, 1.6 + Math.random()*1.4, 0, Math.PI*2);
+      _bubbleCtx.fillStyle = 'rgba(255,255,255,0.9)';
+      _bubbleCtx.fill();
+    }
+  });
+  // Vẽ + cập nhật các hiệu ứng (vòng sáng va chạm 'ring', hoặc bong bóng vỡ ra 'burst'), tự xoá khi tan hết
+  for (var k = _bubbleEffects.length - 1; k >= 0; k--) {
+    var fx = _bubbleEffects[k];
+    var isBurst = fx.type === 'burst';
+    // Hiệu ứng vỡ (burst) cố tình lan CHẬM và tan CHẬM hơn nhiều so với vòng va chạm (ring) để mắt
+    // kịp nhìn rõ cảm giác "nổ tung", thay vì chớp nhoáng khó nhận ra như trước
+    fx.r += isBurst ? ((fx.maxR - fx.r) * 0.09 + 0.55) : ((fx.maxR - fx.r) * 0.25 + 0.6);
+    fx.alpha -= isBurst ? 0.02 : 0.055;
+    if (fx.alpha <= 0 || fx.r >= fx.maxR) { _bubbleEffects.splice(k, 1); continue; }
+    if (isBurst) {
+      // Bong bóng "vỡ ra": vòng màu đầy lan toả chậm rãi + viền nét rõ ràng phía ngoài
+      var burstGrad = _bubbleCtx.createRadialGradient(fx.x, fx.y, 0, fx.x, fx.y, fx.r);
+      burstGrad.addColorStop(0, 'rgba(255,255,255,' + (fx.alpha*0.85) + ')');
+      burstGrad.addColorStop(0.55, 'rgba(' + fx.color + ',' + (fx.alpha*0.55) + ')');
+      burstGrad.addColorStop(1, 'rgba(' + fx.color + ',0)');
+      _bubbleCtx.beginPath();
+      _bubbleCtx.arc(fx.x, fx.y, fx.r, 0, Math.PI*2);
+      _bubbleCtx.fillStyle = burstGrad;
+      _bubbleCtx.fill();
+      _bubbleCtx.beginPath();
+      _bubbleCtx.arc(fx.x, fx.y, fx.r, 0, Math.PI*2);
+      _bubbleCtx.lineWidth = 1.8;
+      _bubbleCtx.strokeStyle = 'rgba(' + fx.color + ',' + (fx.alpha*0.8) + ')';
+      _bubbleCtx.stroke();
+    } else {
+      _bubbleCtx.beginPath();
+      _bubbleCtx.arc(fx.x, fx.y, fx.r, 0, Math.PI*2);
+      _bubbleCtx.lineWidth = 2;
+      _bubbleCtx.strokeStyle = 'rgba(255,255,255,' + fx.alpha + ')';
+      _bubbleCtx.stroke();
+    }
+  }
+  // Vẽ + cập nhật các mảnh vỡ nhỏ bắn tung ra ngoài khi bong bóng "nổ" (chậm dần rồi mờ dần)
+  for (var fi = _bubbleFragments.length - 1; fi >= 0; fi--) {
+    var fr = _bubbleFragments[fi];
+    fr.x += fr.vx; fr.y += fr.vy;
+    fr.vx *= 0.965; fr.vy *= 0.965;
+    fr.alpha -= 0.016;
+    if (fr.alpha <= 0) { _bubbleFragments.splice(fi, 1); continue; }
+    _bubbleCtx.beginPath();
+    _bubbleCtx.arc(fr.x, fr.y, fr.size, 0, Math.PI*2);
+    _bubbleCtx.fillStyle = 'rgba(' + fr.color + ',' + fr.alpha + ')';
+    _bubbleCtx.fill();
+  }
+  _bubbleAnimId = requestAnimationFrame(_bubbleTick);
+}
+
+function stopBubbleSaver(){
+  _bubbleActive = false;
+  _bubbleDismissing = false;
+  if (_bubbleAnimId) { cancelAnimationFrame(_bubbleAnimId); _bubbleAnimId = null; }
+  clearTimeout(_bubbleLogoJoinTimer);
+  var overlay = document.getElementById('bubble-saver');
+  if (overlay) overlay.style.display = 'none';
+  var logoWrap = document.getElementById('bubble-logo-wrap');
+  if (logoWrap) { logoWrap.style.display = 'none'; logoWrap.style.transition = 'none'; }
+  var headerImg = document.getElementById('app-logo-img');
+  if (headerImg) headerImg.style.visibility = 'visible';
+  _bubbleList = [];
+  _bubbleEffects = [];
+  _bubbleFragments = [];
+}
+
+
+/* ══ SETTINGS PANEL ══ */
+function openSettings() {
+  var settingsOverlay = document.getElementById('settingsOverlay');
+  if (!settingsOverlay) return;
+  settingsOverlay.classList.add('show');
+  // Khôi phục trạng thái toggle từ localStorage
+  document.getElementById('sw-bubble').checked = getSetting('bubbleSaver', true);
+  document.getElementById('sw-sound').checked  = getSetting('bubblePopSound', true);
+  document.getElementById('sw-wakelock').checked = getSetting('wakelock', false);
+}
+function closeSettings() {
+  var settingsOverlay = document.getElementById('settingsOverlay');
+  if (settingsOverlay) settingsOverlay.classList.remove('show');
+}
+
+document.getElementById('btnSettings').addEventListener('click', openSettings);
+document.addEventListener('click', function(e) {
+  var ov = document.getElementById('settingsOverlay');
+  if (ov && e.target === ov) closeSettings();
+});
+
 /* Init */
 renderHist();
+resetIdleTimer();
+if(getSetting('wakelock',false)) applyWakeLock(true);
 </script>
+
+
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-drag"></div>
+    <div class="settings-title">⚙️ Cài đặt</div>
+
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <div class="settings-row-label">🫧 Bảo vệ màn hình</div>
+        <div class="settings-row-sub">Bong bóng xuất hiện sau 30 giây không thao tác</div>
+      </div>
+      <label class="sw-wrap">
+        <input type="checkbox" id="sw-bubble" checked onchange="saveSetting('bubbleSaver',this.checked);resetIdleTimer()">
+        <span class="sw-track"></span>
+      </label>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <div class="settings-row-label">🔊 Âm thanh bong bóng</div>
+        <div class="settings-row-sub">Tiếng nổ khi chạm màn hình thoát bảo vệ</div>
+      </div>
+      <label class="sw-wrap">
+        <input type="checkbox" id="sw-sound" checked onchange="saveSetting('bubblePopSound',this.checked)">
+        <span class="sw-track"></span>
+      </label>
+    </div>
+
+
+    <div class="settings-row">
+      <div class="settings-row-left">
+        <div class="settings-row-label">💡 Màn hình luôn bật</div>
+        <div class="settings-row-sub">Giữ màn hình sáng khi dùng app (Wake Lock)</div>
+      </div>
+      <label class="sw-wrap">
+        <input type="checkbox" id="sw-wakelock" onchange="saveSetting('wakelock',this.checked);applyWakeLock(this.checked)">
+        <span class="sw-track"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- BONG BÓNG BẢO VỆ MÀN HÌNH -->
+<div id="bubble-saver">
+  <canvas id="bubble-canvas" style="display:block;width:100%;height:100%"></canvas>
+  <div id="bubble-logo-wrap">
+    <img id="bubble-logo-img" src="icons/icon-192.png" alt="">
+  </div>
+  <div class="bubble-hint">Chạm màn hình để tiếp tục</div>
+</div>
 </body>
 </html>
