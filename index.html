@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="theme-color" content="#F5F0E8"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Lãi Suất"/>
+  <title>Tính Lãi Suất Tiền Vay - Gửi</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+    :root{
+      /* Nền sáng ấm — kem/vàng đất */
+      --navy:#F5F0E8;        /* nền trang chính — kem sáng */
+      --navy-light:#FFFDF7;  /* nền card — trắng kem */
+      --navy-mid:#EDE6D6;    /* nền input — kem đậm hơn chút */
+
+      /* Accent vàng đồng */
+      --gold:#A07830;        /* vàng đồng chính */
+      --gold-light:#7A5A20;  /* vàng đậm hơn cho chữ trên nền sáng */
+      --gold-dim:#C4943A;    /* vàng nhạt hơn — accent phụ */
+
+      /* Chữ */
+      --text:#2C1F0E;        /* nâu đậm — chữ chính */
+      --muted:#7A6A52;       /* nâu nhạt — chữ phụ */
+      --border:#D4C4A0;      /* border kem vàng */
+
+      /* Trạng thái */
+      --green:#2D8A5A;       /* xanh lá đậm — dễ đọc trên nền sáng */
+      --red:#C0392B;         /* đỏ đậm */
+      --r:14px;
+    }
+
+    html,body{font-family:'Be Vietnam Pro',sans-serif;background:var(--navy);color:var(--text)}
+
+    /* Scroll chỉ bật khi lịch sử mở */
+    body{
+      display:flex;flex-direction:column;align-items:center;
+      min-height:100vh;padding:10px 14px 48px;
+      overflow:hidden; /* mặc định khóa scroll */
+    }
+    body.scroll-on{ overflow-y:auto; }
+
+    /* ── % suffix — luôn hiện sau số/placeholder ── */
+    .rate-input-wrap{
+      position:relative;flex:1;display:flex;align-items:center;
+    }
+    .rate-input-wrap input{
+      width:100%;
+    }
+    .rate-suffix{
+      position:absolute;
+      top:50%;transform:translateY(-50%);
+      font-size:18px;font-weight:700;
+      color:var(--muted);
+      pointer-events:none;user-select:none;
+      opacity:0.6;
+      left:60px;
+    }
+
+    /* nav-btn không dùng */
+    .nav-btn{ display:none!important; }
+
+    /* ══════════════════════════════
+       HEADER — gọn hàng ngang
+       ══════════════════════════════ */
+    header{
+      width:100%;max-width:480px;
+      display:flex;align-items:center;
+      gap:10px;padding:8px 0 12px;
+      position:relative;
+    }
+
+    /* ── Đồng xu xoay 3D mượt ── */
+    @keyframes coinSpin {
+      from { transform: perspective(600px) rotateY(0deg); }
+      to   { transform: perspective(600px) rotateY(360deg); }
+    }
+
+    .app-icon{
+      width:48px;height:48px;flex-shrink:0;
+      overflow:visible;
+      position:relative;
+    }
+
+    .app-icon img{
+      width:100%;height:100%;
+      object-fit:contain;display:block;
+      animation: coinSpin 4s linear infinite;
+      transform-style:preserve-3d;
+      cursor:pointer;
+    }
+
+    /* Bấm vào: tăng tốc quay */
+    .app-icon img:active{
+      animation-duration: .6s;
+    }
+
+    .header-text{flex:1;min-width:0}
+    .header-text h1{
+      font-size:15px;font-weight:800;line-height:1.2;
+      color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .header-text h1 span{color:var(--gold-light)}
+
+    .version{
+      font-size:9px;font-weight:600;letter-spacing:.07em;
+      color:var(--gold-dim);background:rgba(160,120,48,.12);
+      border:1px solid rgba(160,120,48,.22);border-radius:20px;
+      padding:1px 7px;display:inline-block;margin-top:2px;
+    }
+
+    /* Nút bánh răng */
+    .btn-settings{
+      width:36px;height:36px;flex-shrink:0;
+      background:var(--navy-light);border:1.5px solid var(--border);
+      border-radius:10px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      transition:border-color .2s,background .2s;
+    }
+    .btn-settings:hover{border-color:var(--gold-dim);background:var(--navy-mid)}
+    .btn-settings svg{width:18px;height:18px;fill:var(--muted)}
+
+    /* ══════════════════════════════
+       CARD
+       ══════════════════════════════ */
+    .card{
+      width:100%;max-width:480px;
+      background:var(--navy-light);border:1px solid var(--border);
+      border-radius:var(--r);padding:18px 16px;
+      box-shadow:0 2px 12px rgba(120,80,20,.1);
+    }
+
+    .fields{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+    .field{display:flex;flex-direction:column;gap:5px}
+
+    .field label{
+      font-size:11px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;
+    }
+
+    /* ── Input chung ── */
+    .input-wrap{position:relative;display:flex;align-items:stretch}
+
+    .input-wrap input{
+      flex:1;min-width:0;
+      background:var(--navy-mid);
+      border:1.5px solid var(--border);
+      border-radius:10px;
+      color:var(--text);
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:19px;font-weight:700;
+      padding:11px 14px;
+      outline:none;
+      transition:border-color .2s,box-shadow .2s;
+      -moz-appearance:textfield;appearance:textfield;
+    }
+    .input-wrap input::-webkit-outer-spin-button,
+    .input-wrap input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+    .input-wrap input:focus{
+      border-color:var(--gold);
+      box-shadow:0 0 0 3px rgba(160,120,48,.18);
+    }
+    .input-wrap input::placeholder{color:var(--border);font-weight:400}
+
+    /* Unit tag tĩnh (ngày, VNĐ) */
+    .unit{
+      position:absolute;right:13px;top:50%;transform:translateY(-50%);
+      font-size:12px;font-weight:700;color:var(--gold-dim);
+      pointer-events:none;user-select:none;
+    }
+    .input-wrap.has-unit input{padding-right:52px}
+
+    /* ── Hàng lãi suất: input + select cùng hàng, không rộng hơn ── */
+    .rate-row{display:flex;gap:0;align-items:stretch}
+
+    .rate-row input{
+      flex:1;min-width:0;
+      background:var(--navy-mid);
+      border:1.5px solid var(--border);
+      border-right:none;
+      border-radius:10px 0 0 10px;
+      color:var(--text);
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:19px;font-weight:700;
+      padding:11px 14px;
+      outline:none;
+      transition:border-color .2s,box-shadow .2s;
+      -moz-appearance:textfield;appearance:textfield;
+      width:0; /* flex sẽ quyết định */
+    }
+    .rate-row input::-webkit-outer-spin-button,
+    .rate-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+    .rate-row input:focus{
+      border-color:var(--gold);
+      box-shadow:0 0 0 3px rgba(160,120,48,.18);
+      z-index:1;
+    }
+    .rate-row input::placeholder{color:var(--border);font-weight:400}
+
+    /* Select đơn vị lãi suất — khớp chiều cao input, không làm rộng */
+    /* ── Custom dropdown đơn vị lãi suất ── */
+    .unit-dropdown{
+      position:relative;flex-shrink:0;
+    }
+
+    .unit-btn{
+      height:100%;
+      display:flex;align-items:center;gap:6px;
+      background:var(--navy-mid);
+      border:1.5px solid var(--border);
+      border-left:1px solid var(--gold-dim);
+      border-radius:0 10px 10px 0;
+      color:var(--gold-light);
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:13px;font-weight:700;
+      padding:0 12px 0 10px;
+      cursor:pointer;
+      white-space:nowrap;
+      min-width:90px;
+      justify-content:space-between;
+      transition:border-color .2s,background .2s;
+      user-select:none;
+      -webkit-user-select:none;
+    }
+    .unit-btn:hover,.unit-btn.open{
+      border-color:var(--gold);
+      background:var(--navy-light);
+    }
+    .unit-btn .arrow{
+      width:10px;height:10px;flex-shrink:0;
+      transition:transform .2s;
+    }
+    .unit-btn.open .arrow{transform:rotate(180deg)}
+    .unit-btn .arrow path{fill:var(--gold-dim)}
+
+    /* Panel xổ xuống */
+    .unit-menu{
+      position:absolute;top:calc(100% + 6px);right:0;
+      background:var(--navy-light);
+      border:1.5px solid var(--gold-dim);
+      border-radius:12px;
+      overflow:hidden;
+      min-width:130px;
+      box-shadow:0 8px 24px rgba(80,50,10,.35);
+      z-index:150;
+      transform:scaleY(.85) translateY(-8px);
+      transform-origin:top right;
+      opacity:0;pointer-events:none;
+      transition:transform .18s cubic-bezier(.4,0,.2,1),opacity .18s;
+    }
+    .unit-menu.open{
+      transform:scaleY(1) translateY(0);
+      opacity:1;pointer-events:all;
+    }
+
+    .unit-option{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:13px 16px;
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:14px;font-weight:700;
+      color:var(--text);
+      cursor:pointer;
+      transition:background .15s;
+      gap:10px;
+    }
+    .unit-option:not(:last-child){border-bottom:1px solid var(--border)}
+    .unit-option:hover{background:var(--navy-mid)}
+    .unit-option.selected{color:var(--gold-light)}
+
+    /* Checkmark */
+    .unit-check{
+      width:18px;height:18px;flex-shrink:0;
+      border:2px solid var(--border);
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      transition:border-color .15s,background .15s;
+    }
+    .unit-option.selected .unit-check{
+      border-color:var(--gold);
+      background:var(--gold);
+    }
+    .unit-check::after{
+      content:'';
+      display:none;
+      width:6px;height:6px;
+      background:var(--navy-light);
+      border-radius:50%;
+    }
+    .unit-option.selected .unit-check::after{display:block}
+
+    /* ── Hint số tiền bằng chữ ── */
+    .hint{font-size:11px;color:var(--muted);margin-top:3px;padding-left:2px;line-height:1.4}
+
+    /* ══════════════════════════════
+       Result box
+       ══════════════════════════════ */
+    .result-box{
+      background:var(--navy-mid);border:1.5px solid var(--gold-dim);
+      border-radius:var(--r);padding:16px 14px;
+      position:relative;overflow:hidden;transition:border-color .3s;
+    }
+    .result-box.active{border-color:var(--gold)}
+    .result-box::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:2px;
+      background:linear-gradient(90deg,transparent,var(--gold),transparent);
+      opacity:0;transition:opacity .3s;
+    }
+    .result-box.active::before{opacity:1}
+
+    .result-label{
+      font-size:10px;font-weight:700;color:var(--gold-dim);
+      text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;
+    }
+
+    .result-num{
+      font-size:clamp(22px,5.5vw,32px);font-weight:800;
+      color:var(--gold-light);letter-spacing:-0.5px;
+      min-height:38px;display:flex;align-items:baseline;gap:5px;
+      word-break:break-all;transition:color .3s;
+    }
+    .result-num.empty{font-size:16px;font-weight:400;color:var(--border)}
+    .result-num .dong{font-size:15px;font-weight:600;color:var(--gold-dim);align-self:flex-end;padding-bottom:1px}
+
+    .result-words{
+      display:none;margin-top:9px;
+      border-top:1px solid var(--border);padding-top:9px;
+      font-size:13px;font-weight:500;color:var(--muted);
+      font-style:italic;line-height:1.5;
+    }
+    .result-words.show{display:block}
+    .result-words b{color:var(--text);font-style:normal;font-weight:700}
+
+    /* Công thức nhỏ */
+    /* ── Label hàng lãi suất có công thức ── */
+    .rate-label-row{
+      display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;
+    }
+    .rate-label-row .lbl{
+      font-size:11px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;
+    }
+    .rate-formula{
+      font-size:10px;font-weight:600;
+      color:var(--gold-dim);
+      font-style:italic;white-space:nowrap;
+    }
+
+    /* ══ POPUP XÁC NHẬN XÓA ══ */
+    .popup-overlay{
+      position:fixed;inset:0;
+      background:rgba(80,50,10,.6);
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+      display:flex;align-items:center;justify-content:center;
+      z-index:200;
+      opacity:0;pointer-events:none;
+      transition:opacity .2s;
+    }
+    .popup-overlay.show{opacity:1;pointer-events:all}
+
+    .popup-box{
+      background:var(--navy-light);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:28px 24px 20px;
+      width:min(320px,88vw);
+      text-align:center;
+      transform:scale(.92) translateY(12px);
+      transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+      box-shadow:0 20px 60px rgba(80,50,10,.25);
+    }
+    .popup-overlay.show .popup-box{transform:scale(1) translateY(0)}
+
+    .popup-icon{font-size:36px;margin-bottom:12px;line-height:1}
+    .popup-title{
+      font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px;
+    }
+    .popup-msg{
+      font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:22px;
+    }
+    .popup-msg strong{color:var(--red)}
+
+    .popup-btns{display:flex;gap:10px}
+    .popup-btn{
+      flex:1;padding:12px;border-radius:10px;
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:14px;font-weight:700;cursor:pointer;
+      border:none;transition:opacity .15s,transform .1s;
+    }
+    .popup-btn:active{transform:scale(.97)}
+    .popup-btn.cancel{
+      background:var(--navy-mid);
+      border:1.5px solid var(--border);
+      color:var(--muted);
+    }
+    .popup-btn.cancel:hover{border-color:var(--muted);color:var(--text)}
+    .popup-btn.confirm{
+      background:linear-gradient(135deg,#922B21,var(--red));
+      color:#fff;
+    }
+    .popup-btn.confirm:hover{opacity:.88}
+
+    /* ══════════════════════════════
+       Button Xóa
+       ══════════════════════════════ */
+    .btn-reset{
+      width:100%;margin-top:14px;
+      background:transparent;border:1.5px solid var(--border);
+      border-radius:10px;color:var(--muted);
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:14px;font-weight:700;
+      padding:12px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      transition:all .15s;
+    }
+    .btn-reset:hover{border-color:var(--red);color:var(--red);background:rgba(192,57,43,.08)}
+    .btn-reset:active{transform:scale(.98)}
+
+    /* ══════════════════════════════
+       History
+       ══════════════════════════════ */
+    .history{width:100%;max-width:480px;margin-top:14px}
+
+    /* Nút toggle accordion */
+    .hist-toggle{
+      width:100%;
+      background:var(--navy-light);
+      border:1px solid var(--border);
+      border-radius:10px;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:11px 14px;
+      cursor:pointer;
+      transition:border-color .2s,background .2s;
+      gap:8px;
+    }
+    .hist-toggle:hover{border-color:var(--gold);background:var(--navy-mid)}
+
+    .hist-toggle-left{display:flex;align-items:center;gap:8px}
+
+    .hist-toggle-left h2{
+      font-size:12px;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.06em;
+      margin:0;
+    }
+
+    /* Badge đếm số mục */
+    .hist-count{
+      font-size:10px;font-weight:700;
+      background:rgba(160,120,48,.18);
+      color:var(--gold-dim);
+      border:1px solid rgba(160,120,48,.25);
+      border-radius:20px;padding:1px 7px;
+    }
+    .hist-count:empty{display:none}
+
+    .hist-toggle-right{display:flex;align-items:center;gap:10px}
+
+    .hist-footer{
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px solid var(--border);
+      text-align:center;
+    }
+    .btn-del-all{
+      display:inline-block;
+      background:none;
+      border:1px solid rgba(192,57,43,.3);
+      border-radius:8px;
+      color:var(--red);
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:12px;font-weight:600;
+      cursor:pointer;
+      padding:8px 20px;
+      transition:background .15s,border-color .15s;
+    }
+    .btn-del-all:hover{background:rgba(192,57,43,.1);border-color:var(--red)}
+
+    /* Mũi tên xoay */
+    .hist-arrow{
+      width:18px;height:18px;flex-shrink:0;
+      transition:transform .25s cubic-bezier(.4,0,.2,1);
+    }
+    .hist-arrow path{fill:var(--muted)}
+    .history.open .hist-arrow{transform:rotate(180deg)}
+
+    /* Panel lịch sử — ẩn/hiện bằng max-height */
+    .hist-panel{
+      overflow:hidden;
+      max-height:0;
+      transition:max-height .3s cubic-bezier(.4,0,.2,1);
+    }
+    .history.open .hist-panel{max-height:9999px}
+
+    .hist-list{display:flex;flex-direction:column;gap:7px;padding-top:10px}
+
+    .hist-item{
+      background:var(--navy-light);border:1px solid var(--border);
+      border-radius:10px;padding:10px 13px;
+      display:flex;justify-content:space-between;align-items:flex-start;
+      cursor:pointer;transition:border-color .15s;
+    }
+    .hist-item:first-child{border-color:rgba(160,120,48,.4);background:rgba(160,120,48,.06)}
+    .hist-item:hover{border-color:var(--gold-dim)}
+
+    .hist-meta{font-size:12px;color:var(--muted);line-height:1.6;flex:1;min-width:0}
+    .hist-meta strong{color:var(--text);font-weight:600}
+    .hist-badge{font-size:9px;font-weight:700;color:var(--gold);letter-spacing:.05em;display:block;margin-bottom:1px}
+
+    .hist-right{text-align:right;flex-shrink:0;margin-left:10px}
+    .hist-num{font-size:14px;font-weight:700;color:var(--gold-light);display:block}
+    .hist-chu{font-size:10px;color:var(--muted);font-style:italic;display:block;max-width:150px;text-align:right;line-height:1.35;margin-top:2px}
+
+    .hist-empty{text-align:center;color:var(--border);font-size:13px;padding:18px 0}
+
+    /* ══════════════════════════════
+       Toast
+       ══════════════════════════════ */
+    .toast{
+      position:fixed;bottom:22px;left:50%;
+      transform:translateX(-50%) translateY(80px);
+      background:var(--gold);color:#fff;
+      font-family:'Be Vietnam Pro',sans-serif;
+      font-size:13px;font-weight:700;
+      padding:9px 20px;border-radius:30px;
+      transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events:none;z-index:100;white-space:nowrap;
+      box-shadow:0 4px 16px rgba(120,80,20,.3);
+    }
+    .toast.show{transform:translateX(-50%) translateY(0)}
+
+    footer{margin-top:24px;text-align:center;font-size:10px;color:var(--muted)}
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER GỌN ══ -->
+<header>
+  <div class="app-icon">
+    <img src="icons/icon-192.png" alt="Tính Lãi"/>
+  </div>
+  <div class="header-text">
+    <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.1.6</span>
+  </div>
+  <button class="btn-settings" id="btnSettings" title="Cài đặt">
+    <!-- Bánh răng SVG -->
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.34.07-.69.07-1.08s-.03-.74-.07-1.08l2.32-1.81c.21-.16.27-.45.13-.69l-2.2-3.81c-.13-.24-.42-.33-.65-.24l-2.74 1.1c-.57-.44-1.18-.81-1.86-1.08l-.42-2.92C14.07 2.18 13.86 2 13.58 2h-3.16c-.28 0-.49.18-.53.45l-.42 2.92c-.68.27-1.3.64-1.86 1.08L4.87 5.36c-.23-.09-.52 0-.65.24L2.02 9.41c-.14.24-.08.53.13.69l2.32 1.81C4.43 12.26 4.4 12.62 4.4 13s.03.74.07 1.08L2.15 15.9c-.21.16-.27.45-.13.69l2.2 3.81c.13.24.42.33.65.24l2.74-1.1c.57.44 1.18.81 1.86 1.08l.42 2.92c.04.27.25.46.53.46h3.16c.28 0 .49-.19.53-.46l.42-2.92c.68-.27 1.3-.64 1.86-1.08l2.74 1.1c.23.09.52 0 .65-.24l2.2-3.81c.14-.24.08-.53-.13-.69l-2.32-1.81z"/>
+    </svg>
+  </button>
+</header>
+
+<!-- ══ CARD ══ -->
+<div class="card">
+  <div class="fields">
+
+    <!-- Lãi suất + dropdown cùng hàng -->
+    <div class="field">
+      <div class="rate-label-row">
+        <span class="lbl">Lãi suất</span>
+        <span class="rate-formula" id="rateFormulaLabel">(÷ 365 × tiền × ngày)</span>
+      </div>
+      <div class="rate-row">
+        <div class="rate-input-wrap">
+          <input id="inp-rate" type="number" inputmode="decimal"
+                 placeholder="0,00" min="0" max="100" step="0.01"
+                 enterkeyhint="next"/>
+          <span class="rate-suffix" id="rateSuffix">%</span>
+        </div>
+        <div class="unit-dropdown" id="unitDropdown">
+          <div class="unit-btn" id="unitBtn">
+            <span id="unitBtnLabel">%/năm</span>
+            <svg class="arrow" viewBox="0 0 10 6" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 0l5 6 5-6z"/>
+            </svg>
+          </div>
+          <div class="unit-menu" id="unitMenu">
+            <div class="unit-option selected" data-value="year">
+              %/năm
+              <span class="unit-check"></span>
+            </div>
+            <div class="unit-option" data-value="month">
+              %/tháng
+              <span class="unit-check"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Số tiền gốc -->
+    <div class="field">
+      <label>Số tiền gốc</label>
+      <div class="input-wrap has-unit">
+        <input id="inp-money" type="text" inputmode="numeric"
+               placeholder="0" autocomplete="off" spellcheck="false"
+               enterkeyhint="next"/>
+        <span class="unit">VNĐ</span>
+      </div>
+      <div class="hint" id="hint-money"></div>
+    </div>
+
+    <!-- Số ngày -->
+    <div class="field">
+      <label>Số ngày</label>
+      <div class="input-wrap has-unit">
+        <input id="inp-days" type="number" inputmode="numeric"
+               placeholder="0" min="0" step="1"
+               enterkeyhint="done"/>
+        <span class="unit">ngày</span>
+      </div>
+    </div>
+
+    <!-- Kết quả -->
+    <div class="field">
+      <label>Thành tiền (tiền lãi)</label>
+      <div class="result-box" id="rBox">
+        <div class="result-label">Kết quả</div>
+        <div class="result-num empty" id="rNum">Nhập dữ liệu để tính</div>
+        <div class="result-words" id="rWords">
+          Bằng chữ:&nbsp;<b id="rChu"></b>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="btn-reset" id="btnXoa">✕&nbsp; Xóa kết quả &amp; lưu lịch sử</button>
+</div>
+
+<!-- ══ LỊCH SỬ ══ -->
+<div class="history" id="histSection">
+  <!-- Thanh toggle -->
+  <div class="hist-toggle" id="histToggle" role="button" tabindex="0" aria-expanded="false">
+    <div class="hist-toggle-left">
+      <h2>Lịch sử tính toán</h2>
+      <span class="hist-count" id="histCount"></span>
+    </div>
+    <div class="hist-toggle-right">
+      <!-- Mũi tên -->
+      <svg class="hist-arrow" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 10l5 5 5-5z"/>
+      </svg>
+    </div>
+  </div>
+  <!-- Panel ẩn/hiện -->
+  <div class="hist-panel" id="histPanel">
+    <div class="hist-list" id="histList">
+      <div class="hist-empty">Chưa có lịch sử</div>
+    </div>
+    <div class="hist-footer" id="histFooter" style="display:none">
+      <span class="btn-del-all" id="btnDelAll">🗑 Xóa tất cả lịch sử</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ POPUP XÁC NHẬN XÓA ══ -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup-box">
+    <div class="popup-icon">🗑️</div>
+    <div class="popup-title">Xóa toàn bộ lịch sử?</div>
+    <div class="popup-msg">Thao tác này sẽ xóa vĩnh viễn<br><strong>toàn bộ lịch sử tính toán</strong><br>và không thể khôi phục.</div>
+    <div class="popup-btns">
+      <button class="popup-btn cancel" id="popupCancel">Hủy</button>
+      <button class="popup-btn confirm" id="popupConfirm">Xóa tất cả</button>
+    </div>
+  </div>
+</div>
+
+
+
+<footer>Lãi đơn · %/năm ÷ 365 × tiền × ngày &nbsp;|&nbsp; %/tháng ÷ 30 × tiền × ngày</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Service Worker ── */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+
+/* ── DOM ── */
+const inpRate   = document.getElementById('inp-rate');
+const rateSuffix= document.getElementById('rateSuffix');
+const unitBtn      = document.getElementById('unitBtn');
+const unitBtnLabel = document.getElementById('unitBtnLabel');
+const unitMenu     = document.getElementById('unitMenu');
+const unitOptions  = unitMenu.querySelectorAll('.unit-option');
+const inpMoney  = document.getElementById('inp-money');
+const inpDays   = document.getElementById('inp-days');
+const hintMoney = document.getElementById('hint-money');
+const rBox      = document.getElementById('rBox');
+const rNum      = document.getElementById('rNum');
+const rWords    = document.getElementById('rWords');
+const rChu      = document.getElementById('rChu');
+const btnXoa    = document.getElementById('btnXoa');
+const histList  = document.getElementById('histList');
+const btnDelAll    = document.getElementById('btnDelAll');
+const btnSettings  = document.getElementById('btnSettings');
+const toast        = document.getElementById('toast');
+const histSection  = document.getElementById('histSection');
+const histToggle   = document.getElementById('histToggle');
+const histCount    = document.getElementById('histCount');
+const rateFormulaLabel = document.getElementById('rateFormulaLabel');
+const popupOverlay = document.getElementById('popupOverlay');
+const popupCancel  = document.getElementById('popupCancel');
+const popupConfirm = document.getElementById('popupConfirm');
+
+let cur  = null;
+let hist = JSON.parse(localStorage.getItem('ls_hist') || '[]');
+
+/* ════════════════════════════════════════
+   % SUFFIX — luôn hiện sau số hoặc placeholder
+   ════════════════════════════════════════ */
+const _sizerCanvas = document.createElement('canvas');
+const _sizerCtx    = _sizerCanvas.getContext('2d');
+
+function updateSuffix() {
+  try {
+    const style = window.getComputedStyle(inpRate);
+    _sizerCtx.font = style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
+    const text = inpRate.value || inpRate.placeholder || '0,00';
+    const tw   = _sizerCtx.measureText(text).width;
+    const pad  = parseFloat(style.paddingLeft) || 14;
+    rateSuffix.style.left    = (pad + tw + 3) + 'px';
+    rateSuffix.style.display = 'block';
+  } catch(e) {}
+}
+
+document.fonts.ready.then(function() {
+  updateSuffix();
+  setTimeout(updateSuffix, 300);
+});
+
+inpRate.addEventListener('input', updateSuffix);
+inpRate.addEventListener('focus', updateSuffix);
+inpRate.addEventListener('blur',  updateSuffix);
+
+/* ════════════════════════════════════════
+/* ════════════════════════════════════════
+   ENTER KEY điều hướng Next / Done
+   (bàn phím tự hiện nút Next/Done qua enterkeyhint)
+   ════════════════════════════════════════ */
+inpRate.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); inpMoney.focus(); }
+});
+inpMoney.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); inpDays.focus(); }
+});
+inpDays.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); inpDays.blur(); }
+});
+
+/* focus tracking cho enter key */
+
+/* ════════════════════════════════════════
+   SCROLL LOCK — chỉ mở khi lịch sử mở
+   ════════════════════════════════════════ */
+function updateScroll() {
+  const isOpen = histSection.classList.contains('open');
+  document.body.classList.toggle('scroll-on', isOpen);
+}
+
+
+
+/* ── Toggle lịch sử — mặc định đóng khi load/reload ── */
+function toggleHist(e) {
+  const isOpen = histSection.classList.toggle('open');
+  histToggle.setAttribute('aria-expanded', isOpen);
+  updateScroll();
+}
+histToggle.addEventListener('click', toggleHist);
+histToggle.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleHist();} });
+
+/* ── Custom dropdown đơn vị lãi suất ── */
+let currentUnit = localStorage.getItem('ls_unit') || 'year';
+
+function setUnit(val) {
+  currentUnit = val;
+  localStorage.setItem('ls_unit', val);
+  const label = val === 'month' ? '%/tháng' : '%/năm';
+  unitBtnLabel.textContent = label;
+  unitOptions.forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.value === val);
+  });
+  rateFormulaLabel.textContent = val === 'month'
+    ? '(÷ 30 × tiền × ngày)'
+    : '(÷ 365 × tiền × ngày)';
+  calculate();
+}
+
+function openMenu()  { unitBtn.classList.add('open');  unitMenu.classList.add('open'); }
+function closeMenu() { unitBtn.classList.remove('open'); unitMenu.classList.remove('open'); }
+function toggleMenu(e){ e.stopPropagation(); unitMenu.classList.contains('open') ? closeMenu() : openMenu(); }
+
+unitBtn.addEventListener('click', toggleMenu);
+
+unitOptions.forEach(opt => {
+  opt.addEventListener('click', e => {
+    e.stopPropagation();
+    setUnit(opt.dataset.value);
+    closeMenu();
+  });
+});
+
+/* Đóng khi bấm ngoài */
+document.addEventListener('click', () => closeMenu());
+
+/* Khởi tạo */
+setUnit(currentUnit);
+
+/* ══════════════════════════════════════
+   Format số có dấu chấm — vi-VN
+   ══════════════════════════════════════ */
+function fmtDot(n){
+  return Math.round(n).toLocaleString('vi-VN');
+}
+
+/* ══════════════════════════════════════
+   Đọc số bằng chữ tiếng Việt
+   ══════════════════════════════════════ */
+const DV=['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
+const CH=['','mười','hai mươi','ba mươi','bốn mươi','năm mươi',
+          'sáu mươi','bảy mươi','tám mươi','chín mươi'];
+
+function d3(n){
+  const h=Math.floor(n/100),t=Math.floor((n%100)/10),d=n%10;
+  let s='';
+  if(h) s+=DV[h]+' trăm';
+  if(!t&&!d) return s.trim();
+  if(!t){s+=(h?' lẻ ':'')+DV[d];return s.trim();}
+  if(t===1){
+    s+=(s?' ':'')+'mười';
+    if(d===5)s+=' lăm';else if(d)s+=' '+DV[d];
+  }else{
+    s+=(s?' ':'')+CH[t];
+    if(d===1)s+=' mốt';else if(d===5)s+=' lăm';else if(d)s+=' '+DV[d];
+  }
+  return s.trim();
+}
+
+function bangChu(n){
+  n=Math.round(n);
+  if(!n) return 'Không đồng';
+  const ti=Math.floor(n/1e9),tr=Math.floor((n%1e9)/1e6),
+        ng=Math.floor((n%1e6)/1e3),d=n%1e3;
+  const p=[];
+  if(ti) p.push(d3(ti)+' tỷ');
+  if(tr) p.push(d3(tr)+' triệu');
+  if(ng) p.push(d3(ng)+' nghìn');
+  if(d)  p.push(d3(d));
+  const s=p.join(' ');
+  return s.charAt(0).toUpperCase()+s.slice(1)+' đồng';
+}
+
+/* ══════════════════════════════════════
+   Input số tiền — format dấu chấm
+   ══════════════════════════════════════ */
+inpMoney.addEventListener('input', function(){
+  const raw    = this.value;
+  const digits = raw.replace(/\D/g,'');
+  if(!digits){this.value='';hintMoney.textContent='';calculate();return;}
+
+  const numVal    = parseInt(digits,10);
+  const formatted = numVal.toLocaleString('vi-VN');
+
+  const pos    = this.selectionStart;
+  const oldLen = raw.length;
+  this.value   = formatted;
+  const newPos = Math.max(0, pos + (formatted.length - oldLen));
+  try{this.setSelectionRange(newPos,newPos);}catch(e){}
+
+  hintMoney.textContent = bangChu(numVal);
+  calculate();
+});
+
+/* ══════════════════════════════════════
+   Tính toán — 2 công thức
+   %/năm  : LS/100/365 × tiền × ngày
+   %/tháng: LS/100/30  × tiền × ngày
+   ══════════════════════════════════════ */
+function calculate(){
+  const rate  = parseFloat(inpRate.value);
+  const money = parseInt(inpMoney.value.replace(/\./g,'').replace(/,/g,''),10)||0;
+  const days  = parseFloat(inpDays.value);
+  const unit  = currentUnit; // 'year' | 'month'
+
+  if(!rate||!money||!days||rate<=0||money<=0||days<=0){
+    rNum.textContent='Nhập dữ liệu để tính';
+    rNum.className='result-num empty';
+    rBox.classList.remove('active');
+    rWords.classList.remove('show');
+    cur=null;return;
+  }
+
+  const divisor  = unit==='month' ? 30 : 365;
+  const interest = (rate/100/divisor)*money*days;
+  const rounded  = Math.round(interest);
+  cur = {rate, money, days, interest, unit};
+
+  rNum.innerHTML = fmtDot(rounded)+'<span class="dong">đ</span>';
+  rNum.className = 'result-num';
+  rBox.classList.add('active');
+
+  rChu.textContent = bangChu(rounded);
+  rWords.classList.add('show');
+
+  const unitLabel = unit==='month' ? '%/tháng ÷ 30' : '%/năm ÷ 365';
+}
+
+[inpRate,inpDays].forEach(el=>el.addEventListener('input',calculate));
+
+/* ══════════════════════════════════════
+   Xóa & lưu lịch sử
+   ══════════════════════════════════════ */
+btnXoa.addEventListener('click',()=>{
+  if(!cur){
+    showToast('⚠️ Bạn chưa nhập dữ liệu');
+    return;
+  }
+  hist.unshift({
+    id:Date.now(),
+    rate:cur.rate, money:cur.money, days:cur.days,
+    interest:cur.interest, unit:cur.unit,
+    time:new Date().toLocaleString('vi-VN',{
+      hour:'2-digit',minute:'2-digit',
+      day:'2-digit',month:'2-digit',year:'numeric'
+    })
+  });
+  if(hist.length>30) hist=hist.slice(0,30);
+  localStorage.setItem('ls_hist',JSON.stringify(hist));
+  renderHist();
+  inpRate.value='';inpMoney.value='';inpDays.value='';
+  hintMoney.textContent='';
+  calculate();
+  showToast('✓ Đã lưu — form đã xóa');
+});
+
+/* ── Xóa tất cả lịch sử ── */
+/* ── Popup xác nhận xóa lịch sử ── */
+function showPopup(){ popupOverlay.classList.add('show'); }
+function hidePopup(){ popupOverlay.classList.remove('show'); }
+
+popupOverlay.addEventListener('click', e => { if(e.target===popupOverlay) hidePopup(); });
+popupCancel.addEventListener('click', hidePopup);
+popupConfirm.addEventListener('click', () => {
+  hist=[];localStorage.removeItem('ls_hist');
+  renderHist();hidePopup();
+  histSection.classList.remove('open');
+  histToggle.setAttribute('aria-expanded', false);
+  updateScroll();
+  showToast('Đã xóa toàn bộ lịch sử');
+});
+
+btnDelAll.addEventListener('click',()=>{
+  if(!hist.length) return;
+  showPopup();
+});
+
+/* ── Nút cài đặt (placeholder — mở rộng sau) ── */
+btnSettings.addEventListener('click',()=>{
+  showToast('⚙️ Cài đặt — sắp ra mắt');
+});
+
+/* ══════════════════════════════════════
+   Render lịch sử
+   ══════════════════════════════════════ */
+function renderHist(){
+  /* Cập nhật badge đếm */
+  histCount.textContent = hist.length ? hist.length : '';
+  const histFooter = document.getElementById('histFooter');
+
+  if(!hist.length){
+    histList.innerHTML='<div class="hist-empty">Chưa có lịch sử</div>';
+    if(histFooter) histFooter.style.display='none';
+    return;
+  }
+  if(histFooter) histFooter.style.display='block';
+  histList.innerHTML=hist.map((h,i)=>{
+    const r=Math.round(h.interest);
+    const uLabel=h.unit==='month'?'%/tháng':'%/năm';
+    return `
+      <div class="hist-item" data-id="${h.id}">
+        <div class="hist-meta">
+          ${i===0?'<span class="hist-badge">● MỚI NHẤT</span>':''}
+          <strong>${h.rate}${uLabel}</strong> &nbsp;·&nbsp;
+          <strong>${fmtDot(h.money)}</strong>đ &nbsp;·&nbsp;
+          <strong>${h.days}</strong>ngày<br>
+          <span style="font-size:10px;opacity:.5">${h.time}</span>
+        </div>
+        <div class="hist-right">
+          <span class="hist-num">${fmtDot(r)} đ</span>
+          <span class="hist-chu">${bangChu(r)}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  histList.querySelectorAll('.hist-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const e=hist.find(h=>h.id===parseInt(el.dataset.id));
+      if(!e) return;
+      inpRate.value  = e.rate;
+      setUnit(e.unit||'year');
+      inpMoney.value = fmtDot(e.money);
+      inpDays.value  = e.days;
+      hintMoney.textContent=bangChu(e.money);
+      calculate();
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+}
+
+/* ── Toast ── */
+let toastT;
+function showToast(msg){
+  toast.textContent=msg;toast.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>toast.classList.remove('show'),2400);
+}
+
+/* Init */
+renderHist();
+</script>
+</body>
+</html>
