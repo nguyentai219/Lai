@@ -615,7 +615,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="header-text">
     <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
-    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.3.0</span>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.3.1</span>
   </div>
   <button class="btn-settings" id="btnSettings" title="Cài đặt">
     <!-- Bánh răng SVG -->
@@ -750,7 +750,7 @@ if ('serviceWorker' in navigator) {
 <script>
 /* ── Service Worker ── */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js', {scope: './'}).catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/Lai/sw.js', {scope: '/Lai/'}).catch(()=>{}));
 }
 
 /* ── DOM ── */

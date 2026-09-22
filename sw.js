@@ -1,14 +1,14 @@
 /* Service Worker — Lãi Suất v1.3.0 */
-const CACHE = 'laisuat-v1.3.0';
+const CACHE = 'laisuat-v1.3.1';
 const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-192-maskable.png',
-  './icon-512-maskable.png',
-  './favicon-32.png',
+  '/Lai/',
+  '/Lai/index.html',
+  '/Lai/manifest.json',
+  '/Lai/icon-192.png',
+  '/Lai/icon-512.png',
+  '/Lai/icon-192-maskable.png',
+  '/Lai/icon-512-maskable.png',
+  '/Lai/favicon-32.png',
   'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap'
 ];
 
