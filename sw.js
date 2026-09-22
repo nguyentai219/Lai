@@ -1,11 +1,13 @@
 /* Service Worker — Lãi Suất v1.2.8 */
-const CACHE = 'laisuat-v1.2.8';
+const CACHE = 'laisuat-v1.2.9';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './icons/icon-192-maskable.png',
+  './icons/icon-512-maskable.png',
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
   'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap'
