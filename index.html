@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <meta name="theme-color" content="#F5F0E8"/>
+  <meta name="theme-color" content="#C4A060"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Lãi Suất"/>
@@ -54,10 +54,14 @@ if ('serviceWorker' in navigator) {
     html,body{font-family:'Be Vietnam Pro',sans-serif;background:var(--navy);color:var(--text)}
 
     /* Scroll chỉ bật khi lịch sử mở */
+    html{
+      background:#C4A060; /* màu status bar khi overscroll lên đầu */
+    }
     body{
       display:flex;flex-direction:column;align-items:center;
       min-height:100vh;padding:10px 14px 48px;
       overflow:hidden; /* mặc định khóa scroll */
+      background:var(--navy); /* nền chính kem */
     }
     body.scroll-on{ overflow-y:auto; }
 
@@ -89,13 +93,14 @@ if ('serviceWorker' in navigator) {
       display:flex;align-items:center;
       gap:10px;
       padding:10px 14px 12px;
-      margin: 0 -14px;           /* bù padding body để tràn full width */
+      padding-top: calc(10px + env(safe-area-inset-top, 0px));
+      margin: calc(-10px - env(safe-area-inset-top, 0px)) -14px 0;
       width: calc(100% + 28px);
       background:linear-gradient(135deg, #D4B483 0%, #C4A060 40%, #B08840 100%);
       box-shadow:0 3px 12px rgba(120,80,20,.25);
       position:relative;
       border-radius:0 0 16px 16px;
-      margin-bottom:4px;
+      margin-bottom:8px;
     }
 
     /* ── Đồng xu xoay 3D mượt ── */
@@ -625,7 +630,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="header-text">
     <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
-    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.5</span>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.6</span>
   </div>
   <button class="btn-settings" id="btnSettings" title="Cài đặt">
     <!-- Bánh răng SVG -->
