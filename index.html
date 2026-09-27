@@ -87,8 +87,15 @@ if ('serviceWorker' in navigator) {
     header{
       width:100%;max-width:480px;
       display:flex;align-items:center;
-      gap:10px;padding:8px 0 12px;
+      gap:10px;
+      padding:10px 14px 12px;
+      margin: 0 -14px;           /* bù padding body để tràn full width */
+      width: calc(100% + 28px);
+      background:linear-gradient(135deg, #D4B483 0%, #C4A060 40%, #B08840 100%);
+      box-shadow:0 3px 12px rgba(120,80,20,.25);
       position:relative;
+      border-radius:0 0 16px 16px;
+      margin-bottom:4px;
     }
 
     /* ── Đồng xu xoay 3D mượt ── */
@@ -119,27 +126,29 @@ if ('serviceWorker' in navigator) {
     .header-text{flex:1;min-width:0}
     .header-text h1{
       font-size:15px;font-weight:800;line-height:1.2;
-      color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      text-shadow:0 1px 3px rgba(80,40,0,.3);
     }
-    .header-text h1 span{color:var(--gold-light)}
+    .header-text h1 span{color:#FFF8E0}
 
     .version{
       font-size:9px;font-weight:600;letter-spacing:.07em;
-      color:var(--gold-dim);background:rgba(160,120,48,.12);
-      border:1px solid rgba(160,120,48,.22);border-radius:20px;
-      padding:1px 7px;display:inline-block;margin-top:2px;
+      color:rgba(255,255,255,.85);background:rgba(255,255,255,.18);
+      border:1px solid rgba(255,255,255,.3);border-radius:20px;
+      padding:2px 8px;display:inline-block;margin-top:2px;
     }
 
     /* Nút bánh răng */
     .btn-settings{
       width:36px;height:36px;flex-shrink:0;
-      background:var(--navy-light);border:1.5px solid var(--border);
+      background:rgba(255,255,255,.2);
+      border:1.5px solid rgba(255,255,255,.35);
       border-radius:10px;cursor:pointer;
       display:flex;align-items:center;justify-content:center;
       transition:border-color .2s,background .2s;
     }
-    .btn-settings:hover{border-color:var(--gold-dim);background:var(--navy-mid)}
-    .btn-settings svg{width:18px;height:18px;fill:var(--muted)}
+    .btn-settings:hover{background:rgba(255,255,255,.32);border-color:rgba(255,255,255,.5)}
+    .btn-settings svg{width:18px;height:18px;fill:#fff}
 
     /* ══════════════════════════════
        CARD
@@ -604,6 +613,7 @@ if ('serviceWorker' in navigator) {
       box-shadow:0 1px 4px rgba(0,0,0,.2);
     }
     .sw-wrap input:checked + .sw-track::after{transform:translateX(20px)}
+
   </style>
 </head>
 <body>
@@ -615,7 +625,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="header-text">
     <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
-    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.3.2</span>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.5</span>
   </div>
   <button class="btn-settings" id="btnSettings" title="Cài đặt">
     <!-- Bánh răng SVG -->
@@ -677,12 +687,12 @@ if ('serviceWorker' in navigator) {
 
     <!-- Số ngày -->
     <div class="field">
-      <label>Số ngày</label>
+      <label >Số ngày</label>
       <div class="input-wrap has-unit">
         <input id="inp-days" type="number" inputmode="numeric"
                placeholder="0" min="0" step="1"
                enterkeyhint="done"/>
-        <span class="unit">ngày</span>
+        <span class="unit" >ngày</span>
       </div>
     </div>
 
@@ -956,10 +966,10 @@ inpMoney.addEventListener('input', function(){
 function calculate(){
   const rate  = parseFloat(inpRate.value);
   const money = parseInt(inpMoney.value.replace(/\./g,'').replace(/,/g,''),10)||0;
-  const days  = parseFloat(inpDays.value);
-  const unit  = currentUnit; // 'year' | 'month'
+  const time  = parseFloat(inpDays.value);
+  const unit  = currentUnit; // 'year'|'month'
 
-  if(!rate||!money||!days||rate<=0||money<=0||days<=0){
+  if(!rate||!money||!time||rate<=0||money<=0||time<=0){
     rNum.textContent='Nhập dữ liệu để tính';
     rNum.className='result-num empty';
     rBox.classList.remove('active');
@@ -967,20 +977,20 @@ function calculate(){
     cur=null;return;
   }
 
-  const divisor  = unit==='month' ? 30 : 365;
-  const interest = (rate/100/divisor)*money*days;
-  const rounded  = Math.round(interest);
-  cur = {rate, money, days, interest, unit};
+  // Lãi đơn theo ngày
+  var divisor  = unit==='month' ? 30 : 365;
+  var interest = (rate/100/divisor)*money*time;
+
+  const rounded = Math.round(interest);
+  cur = {rate, money, days:time, interest, unit};
 
   rNum.innerHTML = fmtDot(rounded)+'<span class="dong">đ</span>';
   rNum.className = 'result-num';
   rBox.classList.add('active');
-
   rChu.textContent = bangChu(rounded);
   rWords.classList.add('show');
-
-  const unitLabel = unit==='month' ? '%/tháng ÷ 30' : '%/năm ÷ 365';
 }
+
 
 [inpRate,inpDays].forEach(el=>el.addEventListener('input',calculate));
 
@@ -1101,7 +1111,14 @@ async function applyWakeLock(enable) {
   try {
     if (enable === true || enable === 'true') {
       if ('wakeLock' in navigator) {
+        if (_wakeLock) { try { await _wakeLock.release(); } catch(e){} _wakeLock = null; }
         _wakeLock = await navigator.wakeLock.request('screen');
+        // Khi hệ thống tự release (khóa màn hình, chuyển tab...) → request lại ngay
+        _wakeLock.addEventListener('release', function() {
+          if (getSetting('wakelock', true) && document.visibilityState === 'visible') {
+            setTimeout(function(){ applyWakeLock(true); }, 500);
+          }
+        });
       }
     } else {
       if (_wakeLock) { await _wakeLock.release(); _wakeLock = null; }
@@ -1110,8 +1127,12 @@ async function applyWakeLock(enable) {
 }
 // Tự động lấy lại WakeLock khi tab được focus lại
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible' && getSetting('wakelock', false)) {
-    applyWakeLock(true);
+  if (document.visibilityState === 'visible') {
+    // WakeLock tự động bị trình duyệt release khi tab ẩn
+    // → phải request lại mỗi khi quay về foreground nếu người dùng đã bật
+    if (getSetting('wakelock', true)) {
+      setTimeout(function(){ applyWakeLock(true); }, 300);
+    }
   }
 });
 
@@ -1136,7 +1157,38 @@ var _bubbleEffects = []; // hiệu ứng vòng sáng lan toả tại điểm va 
 var _bubbleFragments = []; // các mảnh vỡ nhỏ bắn ra khi bong bóng "nổ tung" lúc tắt overlay
 var _bubbleAnimId = null;
 var _bubbleCanvas = null, _bubbleCtx = null;
-var _bubbleColors = ['96,165,250', '52,211,153', '251,191,36', '244,114,182', '167,139,250', '45,212,191'];
+var _bubbleColors = [
+  /* Xanh dương */
+  '96,165,250',   /* blue-400 */
+  '59,130,246',   /* blue-500 */
+  '14,165,233',   /* sky-500 */
+  '56,189,248',   /* sky-400 */
+  /* Xanh lá - ngọc */
+  '52,211,153',   /* emerald-400 */
+  '34,197,94',    /* green-500 */
+  '45,212,191',   /* teal-400 */
+  '20,184,166',   /* teal-500 */
+  '110,231,183',  /* emerald-300 */
+  /* Vàng - cam */
+  '251,191,36',   /* amber-400 */
+  '252,211,77',   /* amber-300 */
+  '251,146,60',   /* orange-400 */
+  '249,115,22',   /* orange-500 */
+  '253,224,71',   /* yellow-300 */
+  /* Hồng - đỏ - tím */
+  '244,114,182',  /* pink-400 */
+  '236,72,153',   /* pink-500 */
+  '248,113,113',  /* red-400 */
+  '240,171,252',  /* fuchsia-300 */
+  '232,121,249',  /* fuchsia-400 */
+  /* Tím - chàm */
+  '167,139,250',  /* violet-400 */
+  '139,92,246',   /* violet-500 */
+  '129,140,248',  /* indigo-400 */
+  '196,181,253',  /* violet-300 */
+  /* Trắng ngà - ánh vàng */
+  '253,186,116',  /* orange-300 */
+];
 var _bubbleLogoJoinTimer = null;
 var _coinSpinRefTime = 0;
 
@@ -1332,7 +1384,7 @@ function _bubbleCapSpeed(b){
 var _bubbleSoundCtx = null;
 
 function _bubblePlayPop(){
-  if (!getSetting('bubblePopSound', true)) return;
+  if (!getSetting('bubbleSaver', true)) return;
   try {
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
@@ -1597,10 +1649,9 @@ function openSettings() {
   var settingsOverlay = document.getElementById('settingsOverlay');
   if (!settingsOverlay) return;
   settingsOverlay.classList.add('show');
-  // Khôi phục trạng thái toggle từ localStorage
-  document.getElementById('sw-bubble').checked = getSetting('bubbleSaver', true);
-  document.getElementById('sw-sound').checked  = getSetting('bubblePopSound', true);
-  document.getElementById('sw-wakelock').checked = getSetting('wakelock', false);
+  document.getElementById('sw-bubble').checked  = getSetting('bubbleSaver', true);
+  document.getElementById('sw-wakelock').checked = getSetting('wakelock', true);
+
 }
 function closeSettings() {
   var settingsOverlay = document.getElementById('settingsOverlay');
@@ -1613,10 +1664,11 @@ document.addEventListener('click', function(e) {
   if (ov && e.target === ov) closeSettings();
 });
 
+
 /* Init */
 renderHist();
 resetIdleTimer();
-if(getSetting('wakelock',false)) applyWakeLock(true);
+applyWakeLock(getSetting('wakelock', true)); // mặc định bật
 </script>
 
 
@@ -1626,7 +1678,8 @@ if(getSetting('wakelock',false)) applyWakeLock(true);
     <div class="settings-drag"></div>
     <div class="settings-title">⚙️ Cài đặt</div>
 
-    <div class="settings-row">
+
+        <div class="settings-row">
       <div class="settings-row-left">
         <div class="settings-row-label">🫧 Bảo vệ màn hình</div>
         <div class="settings-row-sub">Bong bóng xuất hiện sau 30 giây không thao tác</div>
@@ -1637,16 +1690,6 @@ if(getSetting('wakelock',false)) applyWakeLock(true);
       </label>
     </div>
 
-    <div class="settings-row">
-      <div class="settings-row-left">
-        <div class="settings-row-label">🔊 Âm thanh bong bóng</div>
-        <div class="settings-row-sub">Tiếng nổ khi chạm màn hình thoát bảo vệ</div>
-      </div>
-      <label class="sw-wrap">
-        <input type="checkbox" id="sw-sound" checked onchange="saveSetting('bubblePopSound',this.checked)">
-        <span class="sw-track"></span>
-      </label>
-    </div>
 
 
     <div class="settings-row">
@@ -1655,7 +1698,7 @@ if(getSetting('wakelock',false)) applyWakeLock(true);
         <div class="settings-row-sub">Giữ màn hình sáng khi dùng app (Wake Lock)</div>
       </div>
       <label class="sw-wrap">
-        <input type="checkbox" id="sw-wakelock" onchange="saveSetting('wakelock',this.checked);applyWakeLock(this.checked)">
+        <input type="checkbox" id="sw-wakelock" checked onchange="saveSetting('wakelock',this.checked);applyWakeLock(this.checked)">
         <span class="sw-track"></span>
       </label>
     </div>
