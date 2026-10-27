@@ -1,5 +1,5 @@
-/* Service Worker — Lãi Suất v1.4.7 */
-const CACHE = 'laisuat-v1.4.7';
+/* Service Worker — Lãi Suất v1.4.8 */
+const CACHE = 'laisuat-v1.4.8';
 
 const ASSETS = [
   '/Lai/',
@@ -23,11 +23,13 @@ self.addEventListener('install', e => {
 });
 
 /* ── ACTIVATE: xóa cache cũ + thông báo client reload ── */
+// Chỉ xoá cache CŨ CỦA APP NÀY (tiền tố riêng) — bộ nhớ cache dùng chung cả tên miền
+// nguyentai219.github.io, xoá hết sẽ làm mất bản offline của các app khác (Mủ Cao Su, Quản Lý Heo...).
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+        keys.filter(k => (k.startsWith('laisuat-')) && k !== CACHE).map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim()) // Kiểm soát tất cả tab ngay lập tức
      .then(() => {

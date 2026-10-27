@@ -21,5 +21,6 @@ Truy cập link GitHub Pages → trình duyệt sẽ hỏi "Thêm vào màn hìn
 
 | Phiên bản | Ngày       | Thay đổi |
 |-----------|-----------|---------|
+| v1.4.8    | 2026-10   | Tách dữ liệu khỏi các app khác cùng tên miền: khoá lưu trữ đổi sang tiền tố `lai_` (tự chuyển dữ liệu cũ, trước đây `setting_...` trùng với app Mủ Cao Su); Service Worker chỉ xoá cache `laisuat-` của chính app, không xoá bản offline của app khác |
 | v1.0.1    | 2026-09   | Dấu chấm phân cách, số tiền đầy đủ, tự lưu lịch sử khi xóa |
 | v1.0.0    | 2026-09   | Phiên bản đầu tiên |

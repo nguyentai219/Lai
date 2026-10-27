@@ -630,7 +630,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="header-text">
     <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
-    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.7</span>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.8</span>
   </div>
   <button class="btn-settings" id="btnSettings" title="Cài đặt">
     <!-- Bánh răng SVG -->
@@ -818,7 +818,13 @@ const popupCancel  = document.getElementById('popupCancel');
 const popupConfirm = document.getElementById('popupConfirm');
 
 let cur  = null;
-let hist = JSON.parse(localStorage.getItem('ls_hist') || '[]');
+// Chuyển dữ liệu sang khoá có tiền tố riêng của app (1 lần, KHÔNG xoá khoá cũ vì app khác cùng tên miền có thể đang dùng) — các app trên
+// nguyentai219.github.io dùng chung localStorage nên khoá phải có tiền tố riêng để không đè nhau.
+(function(){ try{ if (localStorage.getItem('lai_migrated_v1')) return;
+  [['ls_hist','lai_hist'],['ls_unit','lai_unit'],['setting_wakelock','lai_setting_wakelock'],['setting_bubbleSaver','lai_setting_bubbleSaver']].forEach(function(p){ var v = localStorage.getItem(p[0]);
+    if (v !== null && localStorage.getItem(p[1]) === null) localStorage.setItem(p[1], v); });
+  localStorage.setItem('lai_migrated_v1', '1'); }catch(e){} })();
+let hist = JSON.parse(localStorage.getItem('lai_hist') || '[]');
 
 /* ════════════════════════════════════════
    % SUFFIX — luôn hiện sau số hoặc placeholder
@@ -884,11 +890,11 @@ histToggle.addEventListener('click', toggleHist);
 histToggle.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleHist();} });
 
 /* ── Custom dropdown đơn vị lãi suất ── */
-let currentUnit = localStorage.getItem('ls_unit') || 'year';
+let currentUnit = localStorage.getItem('lai_unit') || 'year';
 
 function setUnit(val) {
   currentUnit = val;
-  localStorage.setItem('ls_unit', val);
+  localStorage.setItem('lai_unit', val);
   const label = val === 'month' ? '%/tháng' : '%/năm';
   unitBtnLabel.textContent = label;
   unitOptions.forEach(opt => {
@@ -1039,7 +1045,7 @@ btnXoa.addEventListener('click',()=>{
     })
   });
   if(hist.length>30) hist=hist.slice(0,30);
-  localStorage.setItem('ls_hist',JSON.stringify(hist));
+  localStorage.setItem('lai_hist',JSON.stringify(hist));
   renderHist();
   inpRate.value='';inpMoney.value='';inpDays.value='';
   hintMoney.textContent='';
@@ -1055,7 +1061,7 @@ function hidePopup(){ popupOverlay.classList.remove('show'); }
 popupOverlay.addEventListener('click', e => { if(e.target===popupOverlay) hidePopup(); });
 popupCancel.addEventListener('click', hidePopup);
 popupConfirm.addEventListener('click', () => {
-  hist=[];localStorage.removeItem('ls_hist');
+  hist=[];localStorage.removeItem('lai_hist');
   renderHist();hidePopup();
   histSection.classList.remove('open');
   histToggle.setAttribute('aria-expanded', false);
@@ -1164,11 +1170,11 @@ document.addEventListener('visibilitychange', function() {
 });
 
 function getSetting(key, def) {
-  var v = localStorage.getItem('setting_' + key);
+  var v = localStorage.getItem('lai_setting_' + key);
   return v === null ? def : v === 'true';
 }
 function saveSetting(key, val) {
-  localStorage.setItem('setting_' + key, val);
+  localStorage.setItem('lai_setting_' + key, val);
   if (key === 'wakelock') applyWakeLock(val);
 }
 
