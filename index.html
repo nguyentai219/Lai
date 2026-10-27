@@ -8,24 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Lãi Suất"/>
   <title>Tính Lãi Suất Tiền Vay - Gửi</title>
-  <script>
-// Xóa Service Worker và cache cũ để force reload mới nhất
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs.forEach(function(reg) {
-      var url = reg.scope || '';
-      // Chỉ xóa SW cũ không phải scope hiện tại
-      reg.update();
-    });
-  });
-}
-</script>
-<link rel="manifest" href="./manifest.json"/>
-  <link rel="apple-touch-icon" href="./icon-192-maskable.png"/>
+  <link rel="manifest" href="./manifest.json"/>
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png"/>
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="./fonts/be-vietnam-pro.css" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -60,7 +46,7 @@ if ('serviceWorker' in navigator) {
     body{
       display:flex;flex-direction:column;align-items:center;
       min-height:100vh;padding:10px 14px 48px;
-      overflow:hidden; /* mặc định khóa scroll */
+      overflow-x:hidden;overscroll-behavior-y:none;
       background:var(--navy); /* nền chính kem */
     }
     body.scroll-on{ overflow-y:auto; }
@@ -569,7 +555,7 @@ if ('serviceWorker' in navigator) {
     @keyframes bubbleTextPulse{ 0%,100%{opacity:.35} 50%{opacity:.85} }
     #bubble-saver{display:none;position:fixed;inset:0;z-index:9999;background:transparent}
     #bubble-logo-wrap{display:none;position:fixed;z-index:10000;pointer-events:none;perspective:200px;border-radius:50%;overflow:hidden}
-    #bubble-logo-wrap img{width:100%;height:100%;object-fit:contain;border-radius:50%;animation:coinSpin 3.2s linear infinite;backface-visibility:visible}
+    #bubble-logo-wrap img{width:100%;height:100%;object-fit:contain;border-radius:50%;animation:coinSpin 4s linear infinite;backface-visibility:visible}
     .bubble-hint{position:absolute;bottom:36px;left:0;right:0;text-align:center;color:rgba(80,50,10,.6);font-size:12.5px;font-family:'Be Vietnam Pro',sans-serif;pointer-events:none;animation:bubbleTextPulse 2.4s ease-in-out infinite}
 
     /* ══ SETTINGS PANEL ══ */
@@ -630,7 +616,7 @@ if ('serviceWorker' in navigator) {
   </div>
   <div class="header-text">
     <h1>Tính Lãi Suất <span>Tiền Vay – Gửi</span></h1>
-    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.8</span>
+    <span class="version">taidautieng@gmail.com &nbsp;·&nbsp; v1.4.9</span>
   </div>
   <button class="btn-settings" id="btnSettings" title="Cài đặt">
     <!-- Bánh răng SVG -->
@@ -652,9 +638,9 @@ if ('serviceWorker' in navigator) {
       </div>
       <div class="rate-row">
         <div class="rate-input-wrap">
-          <input id="inp-rate" type="number" inputmode="decimal"
-                 placeholder="0,00" min="0" max="100" step="0.01"
-                 enterkeyhint="next"/>
+          <input id="inp-rate" type="text" inputmode="decimal"
+                 placeholder="0,00" autocomplete="off" spellcheck="false"
+                 maxlength="8" enterkeyhint="next"/>
           <span class="rate-suffix" id="rateSuffix">%</span>
         </div>
         <div class="unit-dropdown" id="unitDropdown">
@@ -683,7 +669,7 @@ if ('serviceWorker' in navigator) {
       <label>Số tiền gốc</label>
       <div class="input-wrap has-unit">
         <input id="inp-money" type="text" inputmode="numeric"
-               placeholder="0" autocomplete="off" spellcheck="false"
+               placeholder="0" autocomplete="off" spellcheck="false" maxlength="19"
                enterkeyhint="next"/>
         <span class="unit">VNĐ</span>
       </div>
@@ -694,8 +680,8 @@ if ('serviceWorker' in navigator) {
     <div class="field">
       <label >Số ngày</label>
       <div class="input-wrap has-unit">
-        <input id="inp-days" type="number" inputmode="numeric"
-               placeholder="0" min="0" step="1"
+        <input id="inp-days" type="text" inputmode="numeric"
+               placeholder="0" autocomplete="off" maxlength="5"
                enterkeyhint="done"/>
         <span class="unit" >ngày</span>
       </div>
@@ -764,8 +750,9 @@ if ('serviceWorker' in navigator) {
 
 <script>
 /* ── Service Worker ── */
-if('serviceWorker' in navigator){
+if('serviceWorker' in navigator && !window.AndroidApp){
   window.addEventListener('load', function(){
+    var hadController = !!navigator.serviceWorker.controller, reloading = false;
     navigator.serviceWorker.register('/Lai/sw.js', {scope: '/Lai/'})
       .then(function(reg){
         // Kiểm tra bản mới mỗi khi mở app hoặc quay lại
@@ -777,15 +764,11 @@ if('serviceWorker' in navigator){
       .catch(function(){});
 
     // SW mới activate xong → reload để dùng bản mới
+    // (lần cài đầu tiên không có controller cũ → không cần tải lại)
     navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(!hadController || reloading) return;
+      reloading = true;
       window.location.reload();
-    });
-
-    // Nhận message SW_UPDATED từ SW
-    navigator.serviceWorker.addEventListener('message', function(e){
-      if(e.data && e.data.type === 'SW_UPDATED'){
-        window.location.reload();
-      }
     });
   });
 }
@@ -818,13 +801,19 @@ const popupCancel  = document.getElementById('popupCancel');
 const popupConfirm = document.getElementById('popupConfirm');
 
 let cur  = null;
-// Chuyển dữ liệu sang khoá có tiền tố riêng của app (1 lần, KHÔNG xoá khoá cũ vì app khác cùng tên miền có thể đang dùng) — các app trên
-// nguyentai219.github.io dùng chung localStorage nên khoá phải có tiền tố riêng để không đè nhau.
-(function(){ try{ if (localStorage.getItem('lai_migrated_v1')) return;
-  [['ls_hist','lai_hist'],['ls_unit','lai_unit'],['setting_wakelock','lai_setting_wakelock'],['setting_bubbleSaver','lai_setting_bubbleSaver']].forEach(function(p){ var v = localStorage.getItem(p[0]);
-    if (v !== null && localStorage.getItem(p[1]) === null) localStorage.setItem(p[1], v); });
-  localStorage.setItem('lai_migrated_v1', '1'); }catch(e){} })();
-let hist = JSON.parse(localStorage.getItem('lai_hist') || '[]');
+/* Khoá lưu trữ riêng của app Lãi Suất (tiền tố 'lai_'). Các app khác (Mủ Cao Su, Quản Lý Heo...) chạy
+   chung tên miền nguyentai219.github.io nên dùng CHUNG localStorage — tuyệt đối không dùng khoá chung chung
+   như 'setting_...' để không đè dữ liệu/cài đặt của nhau. Chuyển dữ liệu từ khoá cũ (ls_hist, ls_unit). */
+const K_HIST = 'lai_hist', K_UNIT = 'lai_unit';
+try {
+  [['ls_hist',K_HIST],['ls_unit',K_UNIT]].forEach(function(p){
+    var v = localStorage.getItem(p[0]);
+    if (v !== null) { if (localStorage.getItem(p[1]) === null) localStorage.setItem(p[1], v); localStorage.removeItem(p[0]); }
+  });
+} catch(e) {}
+let hist = [];
+try { hist = JSON.parse(localStorage.getItem(K_HIST) || '[]'); } catch(e) {}
+if (!Array.isArray(hist)) hist = [];
 
 /* ════════════════════════════════════════
    % SUFFIX — luôn hiện sau số hoặc placeholder
@@ -849,11 +838,10 @@ document.fonts.ready.then(function() {
   setTimeout(updateSuffix, 300);
 });
 
-inpRate.addEventListener('input', updateSuffix);
+inpRate.addEventListener('input', function(){ setTimeout(updateSuffix,0); });
 inpRate.addEventListener('focus', updateSuffix);
 inpRate.addEventListener('blur',  updateSuffix);
 
-/* ════════════════════════════════════════
 /* ════════════════════════════════════════
    ENTER KEY điều hướng Next / Done
    (bàn phím tự hiện nút Next/Done qua enterkeyhint)
@@ -890,11 +878,11 @@ histToggle.addEventListener('click', toggleHist);
 histToggle.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleHist();} });
 
 /* ── Custom dropdown đơn vị lãi suất ── */
-let currentUnit = localStorage.getItem('lai_unit') || 'year';
+let currentUnit = localStorage.getItem(K_UNIT) === 'month' ? 'month' : 'year';
 
 function setUnit(val) {
   currentUnit = val;
-  localStorage.setItem('lai_unit', val);
+  localStorage.setItem(K_UNIT, val);
   const label = val === 'month' ? '%/tháng' : '%/năm';
   unitBtnLabel.textContent = label;
   unitOptions.forEach(opt => {
@@ -940,12 +928,13 @@ const DV=['','một','hai','ba','bốn','năm','sáu','bảy','tám','chín'];
 const CH=['','mười','hai mươi','ba mươi','bốn mươi','năm mươi',
           'sáu mươi','bảy mươi','tám mươi','chín mươi'];
 
-function d3(n){
+function d3(n, full){
   const h=Math.floor(n/100),t=Math.floor((n%100)/10),d=n%10;
   let s='';
   if(h) s+=DV[h]+' trăm';
+  else if(full && (t||d)) { s='không trăm'; }
   if(!t&&!d) return s.trim();
-  if(!t){s+=(h?' lẻ ':'')+DV[d];return s.trim();}
+  if(!t){s+=(s?' lẻ ':'')+DV[d];return s.trim();}
   if(t===1){
     s+=(s?' ':'')+'mười';
     if(d===5)s+=' lăm';else if(d)s+=' '+DV[d];
@@ -956,17 +945,27 @@ function d3(n){
   return s.trim();
 }
 
-function bangChu(n){
-  n=Math.round(n);
-  if(!n) return 'Không đồng';
-  const ti=Math.floor(n/1e9),tr=Math.floor((n%1e9)/1e6),
-        ng=Math.floor((n%1e6)/1e3),d=n%1e3;
+/* Đọc số < 1 tỷ; 'lead' = đây là nhóm đầu tiên (không đọc "không trăm") */
+function docDuoiTy(n, lead){
+  const tr=Math.floor(n/1e6),ng=Math.floor((n%1e6)/1e3),d=n%1e3;
   const p=[];
-  if(ti) p.push(d3(ti)+' tỷ');
-  if(tr) p.push(d3(tr)+' triệu');
-  if(ng) p.push(d3(ng)+' nghìn');
-  if(d)  p.push(d3(d));
-  const s=p.join(' ');
+  if(tr){ p.push(d3(tr, !lead)+' triệu'); lead=false; }
+  if(ng){ p.push(d3(ng, !lead)+' nghìn'); lead=false; }
+  if(d)  p.push(d3(d, !lead));
+  return p.join(' ');
+}
+function docSo(n, lead){
+  if(n<1e9) return docDuoiTy(n, lead);
+  const ti=Math.floor(n/1e9), du=n%1e9;
+  let s=docSo(ti, lead)+' tỷ';
+  if(du) s+=' '+docDuoiTy(du, false);
+  return s;
+}
+function bangChu(n){
+  n=Math.round(Math.abs(n));
+  if(!n) return 'Không đồng';
+  if(!Number.isSafeInteger(n)) return '';
+  const s=docSo(n, true);
   return s.charAt(0).toUpperCase()+s.slice(1)+' đồng';
 }
 
@@ -978,14 +977,16 @@ inpMoney.addEventListener('input', function(){
   const digits = raw.replace(/\D/g,'');
   if(!digits){this.value='';hintMoney.textContent='';calculate();return;}
 
-  const numVal    = parseInt(digits,10);
+  const numVal    = parseInt(digits.slice(0,15),10);
   const formatted = numVal.toLocaleString('vi-VN');
 
-  const pos    = this.selectionStart;
-  const oldLen = raw.length;
-  this.value   = formatted;
-  const newPos = Math.max(0, pos + (formatted.length - oldLen));
-  try{this.setSelectionRange(newPos,newPos);}catch(e){}
+  // Đếm số chữ số đứng trước con trỏ rồi đặt lại con trỏ sau đúng chừng ấy chữ số
+  const pos     = this.selectionStart == null ? raw.length : this.selectionStart;
+  let nDigits   = raw.slice(0,pos).replace(/\D/g,'').replace(/^0+/,'').length;
+  this.value    = formatted;
+  let newPos = 0;
+  while(nDigits>0 && newPos<formatted.length){ if(/\d/.test(formatted[newPos])) nDigits--; newPos++; }
+  if(document.activeElement===this){ try{this.setSelectionRange(newPos,newPos);}catch(e){} }
 
   hintMoney.textContent = bangChu(numVal);
   calculate();
@@ -996,13 +997,27 @@ inpMoney.addEventListener('input', function(){
    %/năm  : LS/100/365 × tiền × ngày
    %/tháng: LS/100/30  × tiền × ngày
    ══════════════════════════════════════ */
+function parseRate(v){ return parseFloat(String(v).replace(',','.')); }
+
+inpRate.addEventListener('input', function(){
+  // Chỉ giữ chữ số và 1 dấu thập phân (chấp nhận cả , và .)
+  let v = this.value.replace(/[^0-9.,]/g,'');
+  const i = v.search(/[.,]/);
+  if (i >= 0) v = v.slice(0,i+1) + v.slice(i+1).replace(/[.,]/g,'');
+  if (v !== this.value) this.value = v;
+});
+inpDays.addEventListener('input', function(){
+  const v = this.value.replace(/\D/g,'');
+  if (v !== this.value) this.value = v;
+});
+
 function calculate(){
-  const rate  = parseFloat(inpRate.value);
-  const money = parseInt(inpMoney.value.replace(/\./g,'').replace(/,/g,''),10)||0;
-  const time  = parseFloat(inpDays.value);
+  const rate  = parseRate(inpRate.value);
+  const money = parseInt(inpMoney.value.replace(/\D/g,''),10)||0;
+  const time  = parseInt(inpDays.value,10);
   const unit  = currentUnit; // 'year'|'month'
 
-  if(!rate||!money||!time||rate<=0||money<=0||time<=0){
+  if(!(rate>0)||!(money>0)||!(time>0)){
     rNum.textContent='Nhập dữ liệu để tính';
     rNum.className='result-num empty';
     rBox.classList.remove('active');
@@ -1045,11 +1060,12 @@ btnXoa.addEventListener('click',()=>{
     })
   });
   if(hist.length>30) hist=hist.slice(0,30);
-  localStorage.setItem('lai_hist',JSON.stringify(hist));
+  localStorage.setItem(K_HIST,JSON.stringify(hist));
   renderHist();
   inpRate.value='';inpMoney.value='';inpDays.value='';
   hintMoney.textContent='';
   calculate();
+  updateSuffix();
   showToast('✓ Đã lưu — form đã xóa');
 });
 
@@ -1061,7 +1077,7 @@ function hidePopup(){ popupOverlay.classList.remove('show'); }
 popupOverlay.addEventListener('click', e => { if(e.target===popupOverlay) hidePopup(); });
 popupCancel.addEventListener('click', hidePopup);
 popupConfirm.addEventListener('click', () => {
-  hist=[];localStorage.removeItem('lai_hist');
+  hist=[];localStorage.removeItem(K_HIST);
   renderHist();hidePopup();
   histSection.classList.remove('open');
   histToggle.setAttribute('aria-expanded', false);
@@ -1098,7 +1114,7 @@ function renderHist(){
       <div class="hist-item" data-id="${h.id}">
         <div class="hist-meta">
           ${i===0?'<span class="hist-badge">● MỚI NHẤT</span>':''}
-          <strong>${h.rate}${uLabel}</strong> &nbsp;·&nbsp;
+          <strong>${String(h.rate).replace('.',',')}${uLabel}</strong> &nbsp;·&nbsp;
           <strong>${fmtDot(h.money)}</strong>đ &nbsp;·&nbsp;
           <strong>${h.days}</strong>ngày<br>
           <span style="font-size:10px;opacity:.5">${h.time}</span>
@@ -1114,12 +1130,13 @@ function renderHist(){
     el.addEventListener('click',()=>{
       const e=hist.find(h=>h.id===parseInt(el.dataset.id));
       if(!e) return;
-      inpRate.value  = e.rate;
+      inpRate.value  = String(e.rate).replace('.',',');
       setUnit(e.unit||'year');
       inpMoney.value = fmtDot(e.money);
       inpDays.value  = e.days;
       hintMoney.textContent=bangChu(e.money);
       calculate();
+      updateSuffix();
       window.scrollTo({top:0,behavior:'smooth'});
     });
   });
@@ -1141,10 +1158,13 @@ function showToast(msg){
 /* ══ WAKE LOCK — màn hình luôn bật ══ */
 var _wakeLock = null;
 async function applyWakeLock(enable) {
+  enable = (enable === true || enable === 'true');
+  if (window.AndroidApp) { try { AndroidApp.keepScreenOn(enable); } catch(e) {} return; }
   try {
-    if (enable === true || enable === 'true') {
+    if (enable) {
       if ('wakeLock' in navigator) {
         if (_wakeLock) { try { await _wakeLock.release(); } catch(e){} _wakeLock = null; }
+        if (document.visibilityState !== 'visible') return;
         _wakeLock = await navigator.wakeLock.request('screen');
         // Khi hệ thống tự release (khóa màn hình, chuyển tab...) → request lại ngay
         _wakeLock.addEventListener('release', function() {
@@ -1183,6 +1203,7 @@ function saveSetting(key, val) {
 // Thời gian chờ trước khi kích hoạt CỐ ĐỊNH 30 giây (không cho tuỳ chỉnh, tránh lỗi khi đặt quá ngắn).
 // Kích hoạt sau 30 giây không có bất kỳ thao tác chạm/gõ/cuộn nào trên toàn app; chạm bất kỳ đâu vào
 // màn hình lúc đang hiện bong bóng sẽ tắt ngay và bắt đầu đếm lại từ đầu.
+var IDLE_MS = 30000;
 var _idleTimer = null;
 var _bubbleActive = false;
 var _bubbleList = [];
@@ -1229,7 +1250,7 @@ function resetIdleTimer(){
   clearTimeout(_idleTimer);
   if (_bubbleActive) stopBubbleSaver();
   if (getSetting('bubbleSaver', true)) {
-    _idleTimer = setTimeout(startBubbleSaver, 15000);
+    _idleTimer = setTimeout(startBubbleSaver, IDLE_MS);
   }
 }
 var _bubbleDismissing = false;
@@ -1284,7 +1305,7 @@ function _bubbleDismiss(){
     _bubbleDismissing = false;
     stopBubbleSaver();
     if (getSetting('bubbleSaver', true)) {
-      _idleTimer = setTimeout(startBubbleSaver, 15000);
+      _idleTimer = setTimeout(startBubbleSaver, IDLE_MS);
     }
   }, 700);
 }
@@ -1324,7 +1345,9 @@ window.addEventListener('resize', _bubbleResizeCanvas);
 
 
 function startBubbleSaver(){
-  if (_bubbleActive) return;
+  if (_bubbleActive || document.visibilityState !== 'visible') return;
+  var ae = document.activeElement;
+  if (ae && ae.tagName === 'INPUT' && ae.type === 'text') { resetIdleTimer(); return; }
   _bubbleActive = true;
   _coinSpinRefTime = performance.now();
   var overlay = document.getElementById('bubble-saver');
@@ -1380,7 +1403,11 @@ function _bubbleLaunchLogo(){
   // gian đã trôi qua kể từ mốc tham chiếu) — để khi header "biến mất"/hiện lại, góc xoay luôn liền mạch,
   // không bị nhảy đột ngột tạo cảm giác khựng lại.
   if (logoImg) {
-    var phase = (performance.now() - _coinSpinRefTime) % 3200;
+    var phase = 0;
+    try {
+      var an = headerImg && headerImg.getAnimations ? headerImg.getAnimations()[0] : null;
+      phase = an && an.currentTime != null ? an.currentTime % 4000 : performance.now() % 4000;
+    } catch(e) {}
     logoImg.style.animationDelay = '-' + phase + 'ms';
   }
   // Ép trình duyệt áp dụng vị trí ban đầu trước khi bắt đầu transition, tránh bị gộp animation
@@ -1698,6 +1725,16 @@ document.addEventListener('click', function(e) {
 });
 
 
+/* Nút Back của app Android: trả về true nếu đã đóng được 1 lớp đang mở */
+window.__onBack = function(){
+  if (_bubbleActive) { _bubbleDismiss(); return true; }
+  var ov = document.getElementById('settingsOverlay');
+  if (ov && ov.classList.contains('show')) { closeSettings(); return true; }
+  if (popupOverlay.classList.contains('show')) { hidePopup(); return true; }
+  if (unitMenu.classList.contains('open')) { closeMenu(); return true; }
+  return false;
+};
+
 /* Init */
 renderHist();
 resetIdleTimer();
@@ -1731,7 +1768,7 @@ applyWakeLock(getSetting('wakelock', true)); // mặc định bật
         <div class="settings-row-sub">Giữ màn hình sáng khi dùng app (Wake Lock)</div>
       </div>
       <label class="sw-wrap">
-        <input type="checkbox" id="sw-wakelock" checked onchange="saveSetting('wakelock',this.checked);applyWakeLock(this.checked)">
+        <input type="checkbox" id="sw-wakelock" checked onchange="saveSetting('wakelock',this.checked)">
         <span class="sw-track"></span>
       </label>
     </div>
